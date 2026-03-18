@@ -276,7 +276,7 @@ static void CAN_SendAsbDataloggerTask(void)
 	canTxStruct_asb_datalogger.valve_interlock_ok = (Interlock_Valve1_Check && Interlock_Valve2_Check);
 	canTxStruct_asb_datalogger.servo_interlock_ok = Servo_Interlock_Check;
 	canTxStruct_asb_datalogger.as_state = can_mcu_apu_state_mission.as_state;
-
+	
 	can_mcu_asb_datalogger_pack(txData, &canTxStruct_asb_datalogger, sizeof(txData));
 	Can_DebugState = 3121;
 	Debug_State = 2121;
@@ -393,6 +393,7 @@ int main(void)
 		  HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port,Valve2_GND_ST_Pin, GPIO_PIN_RESET);
 		  ASRelay_State = 0;	//Open SDC
 		  HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
+		  
 		  }
 	  }
 	  else if(Selected_Mission() == Manual)			//Manual Mission received

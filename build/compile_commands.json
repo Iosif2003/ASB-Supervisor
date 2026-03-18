@@ -1,0 +1,176 @@
+[
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Core/Src/can_mcu.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Core/Src/can_mcu.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Core/Src/can_mcu.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Core/Src/can_mcu.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Core/Src/main.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Core/Src/main.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Core/Src/main.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Core/Src/main.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Core/Src/stm32f4xx_hal_msp.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Core/Src/stm32f4xx_hal_msp.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Core/Src/stm32f4xx_hal_msp.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Core/Src/stm32f4xx_hal_msp.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Core/Src/stm32f4xx_it.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Core/Src/stm32f4xx_it.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Core/Src/stm32f4xx_it.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Core/Src/stm32f4xx_it.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Core/Src/syscalls.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Core/Src/syscalls.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Core/Src/syscalls.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Core/Src/syscalls.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Core/Src/sysmem.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Core/Src/sysmem.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Core/Src/sysmem.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Core/Src/sysmem.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Core/Src/system_stm32f4xx.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Core/Src/system_stm32f4xx.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Core/Src/system_stm32f4xx.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Core/Src/system_stm32f4xx.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dac_ex.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -std=gnu11 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -Wall -fstack-usage -o CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_adc.c.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_adc.c",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_adc.c",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_adc.c.obj"
+},
+{
+  "directory": "/Users/iosifsot/Documents/ASB-Supervisor/build",
+  "command": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc -DSTM32F446xx -DUSE_HAL_DRIVER -I/Users/iosifsot/Documents/ASB-Supervisor/Core/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Device/ST/STM32F4xx/Include -I/Users/iosifsot/Documents/ASB-Supervisor/Drivers/CMSIS/Include -g -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard --sysroot=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/../arm-none-eabi -fdata-sections -ffunction-sections -x assembler-with-cpp -o CMakeFiles/ASBCodeV2.elf.dir/Core/Startup/startup_stm32f446retx.s.obj -c /Users/iosifsot/Documents/ASB-Supervisor/Core/Startup/startup_stm32f446retx.s",
+  "file": "/Users/iosifsot/Documents/ASB-Supervisor/Core/Startup/startup_stm32f446retx.s",
+  "output": "/Users/iosifsot/Documents/ASB-Supervisor/build/CMakeFiles/ASBCodeV2.elf.dir/Core/Startup/startup_stm32f446retx.s.obj"
+}
+]

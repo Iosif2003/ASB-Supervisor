@@ -1,0 +1,21 @@
+{
+  // Force CMake Tools to use the project-local kits file above
+  // instead of the global ~/.local/share/CMakeTools/cmake-tools-kits.json
+  "cmake.additionalKits": ["${workspaceFolder}/.vscode/cmake-kits.json"],
+
+  // Pre-select the ARM kit so VS Code never silently falls back to the
+  // Homebrew compiler on fresh checkouts or after clearing the build folder.
+  "cmake.defaultKit": "ARM GCC 15.2 (STM32F446RE)",
+
+  // Always pass -DTOOLCHAIN_DIR so CMakeLists.txt points the compiler
+  // variables at the correct installation regardless of what is on PATH.
+  "cmake.configureArgs": [
+    "-DTOOLCHAIN_DIR=/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin"
+  ],
+
+  // Build folder kept separate from source; matches the CLI workflow.
+  "cmake.buildDirectory": "${workspaceFolder}/build",
+
+  // Suppress the prompt that asks which kit to use on every fresh configure.
+  "cmake.configureOnOpen": true
+}

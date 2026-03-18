@@ -1,0 +1,10 @@
+[
+  {
+    "name": "ARM GCC 15.2 (STM32F446RE)",
+    "compilers": {
+      "C":   "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-gcc",
+      "CXX": "/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin/arm-none-eabi-g++"
+    },
+    "isTrusted": true
+  }
+]
