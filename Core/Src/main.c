@@ -978,11 +978,11 @@ int Selected_Mission(){
 	//Scenario where AS_Mission == 0 -> AS_Mission == No_Mission we should not enter autonomous nor manual mode so it is left out (return 0)
 	// 1 is Autonomous || 2 is Manual || 0 is No Mission
 	if ((can_mcu_vcu_bools.mode == 0) && (can_mcu_apu_state_mission.as_mission >= 1) && (can_mcu_apu_state_mission.as_mission <= 6))	//AS_mode == driverless, as_mission == 1 ==  Aceleration, as_mission == 6 == Inspection
-			return 1;
-		else if ((can_mcu_vcu_bools.mode == 1) || (can_mcu_apu_state_mission.as_mission == 7)) // as_mode == 1 == manual, as_mission == 7 == Manual driving
-			return 2;
-		else
-			return 0;
+		return 1;
+	else if ((can_mcu_vcu_bools.mode == 1) || (can_mcu_apu_state_mission.as_mission == 7)) // as_mode == 1 == manual, as_mission == 7 == Manual driving
+		return 2;
+	else
+		return 0;
 }
 
 void As_Initial_Check(){
