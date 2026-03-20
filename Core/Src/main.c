@@ -22,7 +22,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include <stdint.h>
 #include "can_mcu.h"
+#include "stm32f4xx_hal.h"
 
 /* USER CODE END Includes */
 
@@ -70,10 +72,11 @@ volatile int APU_Transition;
 
 volatile bool Monitoring, Monitor_All;
 int Manual_monitor_counter;
-bool Manual_monitor_check, Watchdog_Check, Brake_Pressure_Check, Tank_Pressure_Check, Interlock_Valve1_Check, Interlock_Valve2_Check, APU_Communication_Check;
+bool Manual_monitor_check, Service_Brake = false, Watchdog_Check, Brake_Pressure_Check, Tank_Pressure_Check, Interlock_Valve1_Check, Interlock_Valve2_Check, APU_Communication_Check;
 int Watchdog_Check_error, Brake_Pressure_Check_errors, Tank_Pressure_Check_errors, Interlock_Valve1_Check_errors, Interlock_Valve2_Check_errors;
 int Brake_Pressure_Check_ms, Tank_Pressure_Check_ms, APU_Communication_Check_ms;
 float Brake_Pressure;
+uint16_t Value = 0;
 
 // Servo / service brake variables used by CAN payloads.
 int Servo_Command;
@@ -357,6 +360,8 @@ int main(void)
 		  Initial_Checked = false;		//This makes the APU AS_off until Initial Checks are complete
 		  ASRelay_State = 0;			// Open the SDC
 		  HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
+		  Value = 0;
+		  HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
 		  if(ASMS_Out == 1)				//Necessary for the checks
 		  		As_Initial_Check();
 		  break;
@@ -1102,26 +1107,70 @@ void As_Initial_Check(){
 
 		Valve2_GND = 0;
 		HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
-		HAL_Delay(800);
+		HAL_Delay(700);
 
 		do{
 			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT != 0)
 				return;
 		}while(Brake_Pressure < 5);		// IT DEEDS SETTING
 
+		// DE-ACTIVATE EBS //
+
+		Initial_Check_Step = 11;
+
+		Valve2_GND = 1;
+		HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_SET);
+		HAL_Delay(700);
+
+		do{
+			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT != 0)
+				return;
+		}while(Brake_Pressure > 3);
+
+		// ACTIVATE SERVICE BRAKE //
+		
+		Initial_Check_Step = 12;
+
+		Service_Brake = true;	//Service brake is activated by setting this variable to 1 and it is deactivated by setting it to 0, this is used in the monitor all function to activate the service brake if something goes wrong in the checks and it is also used in the initial checks to activate the service brake at the end of the initial checks and then deactivate it after we receive AS_Ready as a final confirmation that everything is working fine and we can start the mission
+		Value = 4095;
+		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
+		HAL_Delay(700);
+
+		do{
+		if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT != 0)
+			return;
+		}while(Brake_Pressure < 5);
+
+		// De-ACTIVATE SERVICE BRAKE //
+
+		Initial_Check_Step = 13;
+
+		Service_Brake = false;
+		Value = 0;
+		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
+		HAL_Delay(700);
+
+		do{
+			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT != 0)
+				return;
+		}while(Brake_Pressure > 3);
+
+		//SET SERVICE BRAKE AVAILABLE //
+
+		Initial_Check_Step = 14;
+
+		Value = 2000;
+		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
+		HAL_Delay(700);
 
 		Initial_Checked = true; 			//Initial Check has been completed (almost) notify APU and wait for AS_Ready transition
 
 
-		Valve2_GND = 1;
-		HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_SET);
-
-
 	//	WAIT FOR APU AS READY	//	(5 seconds Max time)
 
-		Initial_Check_Step = 11;
+		Initial_Check_Step = 15;
 
-		HAL_TIM_Base_Start_IT(&htim6);		//interrupt for 5 seconds
+		//HAL_TIM_Base_Start_IT(&htim6);		//interrupt for 5 seconds
 		do{
 			if(APU_Transition == false){
 				Initial_Checked = false;
@@ -1131,14 +1180,14 @@ void As_Initial_Check(){
 
 	//	AS READY RECEIVED	//
 
-		Initial_Check_Step = 12;
+		Initial_Check_Step = 16;
 		Monitoring = true;
 
 	//	WATCHDOG OPM
 
 		__HAL_TIM_SET_COUNTER(&htim3, 0);	//This ensures that the timer is at 0ms of period because if it was close to the end of its cycle it might end before we reset it via the monitoring function and it would be off
 		htim3.Instance->CR1 |= TIM_CR1_OPM;	//Enables the One Pulse Mode bit on the watchdog PWM timer
-		Initial_Check_Step = 13;			//AS_Initial_Check is completed succesfully if Initial_Check_Step = 13
+		Initial_Check_Step = 17;			//AS_Initial_Check is completed succesfully if Initial_Check_Step = 15
 	}
 
 
