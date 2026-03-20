@@ -26,7 +26,7 @@ set(CMAKE_SIZE         ${_TC_PATH}${TOOLCHAIN_PREFIX}size)
 # Prevent CMake from testing the compiler with a full executable link
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
-project(ASBCodeV2 C CXX ASM)
+project(ASB_Supervisor C CXX ASM)
 
 set(CMAKE_C_STANDARD   11)
 set(CMAKE_CXX_STANDARD 17)

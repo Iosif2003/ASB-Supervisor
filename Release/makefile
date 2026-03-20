@@ -34,34 +34,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := ASBCodeV2
+BUILD_ARTIFACT_NAME := ASB_Supervisor
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-ASBCodeV2.elf \
+ASB_Supervisor.elf \
 
 MAP_FILES += \
-ASBCodeV2.map \
+ASB_Supervisor.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-ASBCodeV2.list \
+ASB_Supervisor.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: ASBCodeV2.elf secondary-outputs
+main-build: ASB_Supervisor.elf secondary-outputs
 
 # Tool invocations
-ASBCodeV2.elf ASBCodeV2.map: $(OBJS) $(USER_OBJS) C:\STM32Codes\ASBCodeV2\STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "ASBCodeV2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\STM32Codes\ASBCodeV2\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ASBCodeV2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+ASB_Supervisor.elf ASB_Supervisor.map: $(OBJS) $(USER_OBJS) C:\STM32Codes\ASB_Supervisor\STM32F446RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "ASB_Supervisor.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\STM32Codes\ASB_Supervisor\STM32F446RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ASB_Supervisor.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -70,14 +70,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-ASBCodeV2.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "ASBCodeV2.list"
+ASB_Supervisor.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "ASB_Supervisor.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) ASBCodeV2.elf ASBCodeV2.list ASBCodeV2.map default.size.stdout
+	-$(RM) ASB_Supervisor.elf ASB_Supervisor.list ASB_Supervisor.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
