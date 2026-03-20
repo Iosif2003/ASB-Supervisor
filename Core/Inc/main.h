@@ -106,7 +106,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 
 //	ADC	//
-#define ADC_BUFFER_SIZE 1
+#define ADC_BUFFER_SIZE 2
 
 // AS MODES	//
 

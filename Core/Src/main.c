@@ -138,6 +138,11 @@ float Voltage_Change;
 uint16_t adc_buffer[ADC_BUFFER_SIZE];	// 0- 4095 adc value
 uint16_t ADC_Value;
 
+float ADC_Voltage_Value_2;
+float Voltage_Change_2;
+uint16_t ADC_Value_2;
+float Tank_Pressure_2;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -505,7 +510,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
   hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T2_TRGO;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.NbrOfConversion = 2;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -517,6 +522,16 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_14;
   sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Rank = 2;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -1343,12 +1358,17 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
     if (hadc->Instance == ADC1)
     {
 		Tank_Pressure_Check_ms = 0;	//Monitoring functiion, each time a new value is received make it 0
-        // ADC conversion done
+        // ADC conversion done - Channel 14 (PC4) - Tank Pressure
         ADC_Value = adc_buffer[0];	//Storing the raw value of adc in ADC_Value
-        // Use or log the value
 		ADC_Voltage_Value = ((float)ADC_Value / 4095.0) * 3.3;	//Converts the adc raw value to voltage value
 		Voltage_Change = ADC_Voltage_Value * 1.5;				//Converts the voltage value from 0-3.3V -> 0-5 V as the pressure sensor outputs
 		Tank_Pressure = (2.5 * Voltage_Change) - 2.5;
+
+		// ADC conversion done - Channel 15 (PC5) - Tank Pressure 2
+		ADC_Value_2 = adc_buffer[1];
+		ADC_Voltage_Value_2 = ((float)ADC_Value_2 / 4095.0) * 3.3;
+		Voltage_Change_2 = ADC_Voltage_Value_2 * 1.5;
+		Tank_Pressure_2 = (2.5 * Voltage_Change_2) - 2.5;
     }
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
