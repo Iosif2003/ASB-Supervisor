@@ -17,4 +17,7 @@
 #define ASB_IC_VALVE_SETTLE_MS           700U
 #define ASB_IC_APU_READY_TIMEOUT_MS      5000U
 
+/* --- ADC --- */
+#define ASB_ADC_BUFFER_SIZE  2U
+
 #endif /* ASB_CONFIG_H */
