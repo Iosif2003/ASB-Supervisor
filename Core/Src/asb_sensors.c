@@ -5,6 +5,7 @@
 
 #include "asb_sensors.h"
 #include "asb_config.h"
+#include "main.h"
 #include <stdint.h>
 #include <stdbool.h>
 
