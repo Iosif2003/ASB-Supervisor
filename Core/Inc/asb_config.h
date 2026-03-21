@@ -20,4 +20,9 @@
 /* --- ADC --- */
 #define ASB_ADC_BUFFER_SIZE  2U
 
+/* --- Service Brake DAC Values --- */
+#define ASB_SB_DAC_DISENGAGED  0U
+#define ASB_SB_DAC_PARK        2000U
+#define ASB_SB_DAC_ENGAGED     4095U
+
 #endif /* ASB_CONFIG_H */
