@@ -374,6 +374,8 @@ int main(void)
 
 		  case(AS_Driving):	 			// AS_Driving = 3 (CAN)
 		  Debug_State = 4;
+		  Value = 0;
+		  HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
 		  if(can_mcu_apu_state_mission.as_set_finished == CAN_MCU_APU_STATE_MISSION_AS_SET_FINISHED_SET__FINISHED__TRUE_CHOICE)
 		  {
 			  Debug_State = 5;
@@ -409,7 +411,7 @@ int main(void)
 	  else if(Selected_Mission() == Manual)			//Manual Mission received
 	  {
 		  Debug_State = 8;
-		  Initial_Check_Step = 0;
+		  Initial_Check_Step = 100;
 		  Monitoring = false;
 		  //This ensures watchdog is Normal mode while we are running manual mode
 		  if ((htim3.Instance->CR1 & TIM_CR1_OPM) != 0) 		//If One Pulse Mode is Enabled
@@ -1316,11 +1318,7 @@ void Manual_Initial_Check()
 		return;
 	}
 
-	if(TSMS_Out_NOT == 1)				//Indicates SDC State
-	{
-		Can_DebugManualCheckState = 3;
-		return;
-	}
+
 
 	Initial_Check_Step = 101;
 	Can_DebugManualCheckState = 4;
