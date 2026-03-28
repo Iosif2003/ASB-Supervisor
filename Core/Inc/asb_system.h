@@ -9,7 +9,7 @@
  * ========================================================= */
 
  /* Initialization */
- void SYS_Init(void);
+ void ASB_System_Init(void);
 
  /* SDC Control */
 void SDC_Close(void);
@@ -29,13 +29,22 @@ bool SYS_GetASRelayIn(void);
 bool SYS_GetASRelayOut(void);
 bool SYS_GetInterlock1(void);
 bool SYS_GetInterlock2(void);
-bool SYS_GetInterlockServiceBrake(void);
+bool SYS_GetInterlockService(void);
 bool SYS_GetInterlockSteering(void);
 
 /* States */
 bool SDC_IsClosed(void);
 bool WDG_IsOPMEnabled(void);
-bool WDG_Isrunning(void);
+bool WDG_IsRunning(void);
+
+/* Mission Selection */
+typedef enum {
+    MISSION_NONE       = 0,
+    MISSION_AUTONOMOUS = 1,
+    MISSION_MANUAL     = 2
+} MissionMode_t;
+
+int SYS_GetSelectedMission(void);
  
 #endif /* ASB_SYSTEM_H */
 

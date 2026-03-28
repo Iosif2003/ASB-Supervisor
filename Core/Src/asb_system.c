@@ -5,6 +5,7 @@
 
 #include "asb_system.h"
 #include "main.h"
+#include "can_mcu.h"
 
 /* Private Variables */
 static bool sdc_is_closed     = false;
@@ -13,6 +14,8 @@ static bool wdg_is_running    = false;
 
 /* External handles from main.c */
 extern TIM_HandleTypeDef htim3;
+extern struct can_mcu_apu_state_mission_t can_mcu_apu_state_mission;
+extern struct can_mcu_vcu_bools_t         can_mcu_vcu_bools;
 
 /* System Initialization */
 void ASB_System_Init(void) {
@@ -135,3 +138,18 @@ bool SYS_GetInterlockSteering(void)
 bool SDC_IsClosed(void)     { return sdc_is_closed;   }
 bool WDG_IsOPMEnabled(void) { return wdg_opm_enabled; }
 bool WDG_IsRunning(void)    { return wdg_is_running;  }
+
+/* Mission Selection */
+
+int SYS_GetSelectedMission(void)
+{
+    if((can_mcu_vcu_bools.mode == 0) &&
+       (can_mcu_apu_state_mission.as_mission >= 1) &&
+       (can_mcu_apu_state_mission.as_mission <= 6))
+        return MISSION_AUTONOMOUS;
+    else if((can_mcu_vcu_bools.mode == 1) ||
+            (can_mcu_apu_state_mission.as_mission == 7))
+        return MISSION_MANUAL;
+    else
+        return MISSION_NONE;
+}
