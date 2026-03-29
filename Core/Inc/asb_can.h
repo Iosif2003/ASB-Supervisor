@@ -34,4 +34,7 @@ float CAN_GetBrakePressureRear(void);
 bool CAN_IsAPUAlive(void);
 void CAN_ResetAPUTimer(void);
 
+uint8_t CAN_GetASState(void);
+void CAN_SetInitialChecked(bool checked);
+
 #endif /* ASB_CAN_H */
