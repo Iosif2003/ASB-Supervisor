@@ -55,11 +55,6 @@ static void IC_SafetyCheck(void)
     }
 }
 
- static bool Notify_APU(void){
-    CAN_SetInitialChecked(true);
-    return (CAN_GetASState() == 2U);
-}
-
 static bool IC_TimerElapsed(uint32_t duration_ms)
 {
     if (ic_timer == 0U) { ic_timer = HAL_GetTick(); }
@@ -100,7 +95,7 @@ void IC_Run(void)
             if (Sensors_TankPressureValid() && Sensors_BrakePressureEngaged()) { ic_state = IC_SET_DIGPIN_HIGH;}
             break;
           
-        case IC_SET_DIGPIN_HIGH: // check sdc deeper in the next version
+        case IC_SET_DIGPIN_HIGH: /*TODO: deep check shutdown logic*/
             SDC_Close();
             ic_state = IC_WAIT_SDC_CLOSE_FIRST_TIME;
             break;
@@ -127,7 +122,7 @@ void IC_Run(void)
             if (SYS_GetASRelayOut()) { ic_state = IC_WAIT_TSMS; }
             break;
 
-        case IC_WAIT_TSMS: // need fix in the next version 
+        case IC_WAIT_TSMS: /*TODO: fix logic*/
             if (!SYS_GetTSMS()) { ic_state = IC_RELEASE_EBS; }
             break;
 
@@ -193,7 +188,10 @@ void IC_Run(void)
             break;      
 
         case IC_NOTIFY_APU:
-            if (Notify_APU())    { ic_state = IC_ENABLE_OPM; }
+            /* Signal APU via CAN (initial_checked = true when ic_state == IC_NOTIFY_APU).
+            Wait for APU to transition to AS_Ready (state 2).
+            timeout → fail */
+            if (CAN_GetASState() == 2U)    { ic_state = IC_ENABLE_OPM; }
             else if (IC_TimerElapsed(ASB_IC_APU_READY_TIMEOUT_MS))    { IC_Fail(); }
             break;
         case IC_ENABLE_OPM:
