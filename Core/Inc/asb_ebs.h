@@ -8,13 +8,21 @@
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 
+ /* EBS Initialization */
+void EBS_Init(void);
+
 /* EBS States */
 bool EBS_IsActivated(void);
 bool EBS_System1_State(void);
 bool EBS_System2_State(void);
 
-/* EBS Initialization */
-void EBS_Init(void);
+typedef enum {
+    EBS_UNAVAILABLE  = 1,  
+    EBS_ARMED        = 2,  
+    EBS_TRIGGERED    = 3   
+} EBS_State_t;
+
+EBS_State_t EBS_State(void);
 
 /* EBS Control */
 void EBS_Activate(void);

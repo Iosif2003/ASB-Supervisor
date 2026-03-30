@@ -12,11 +12,14 @@ static bool ebs_is_activated  = true;
 static bool ebs_system1_state = true;
 static bool ebs_system2_state = true;
 
+static EBS_State_t EBS_state = EBS_UNAVAILABLE;
+
 /* EBS States */
 bool EBS_IsActivated(void)   { return ebs_is_activated;  }
 bool EBS_System1_State(void) { return ebs_system1_state; }
 bool EBS_System2_State(void) { return ebs_system2_state; }
 
+EBS_State_t EBS_State(void) { return EBS_state; }
 /* EBS Initialization */
 void EBS_Init(void)
 {

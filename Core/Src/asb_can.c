@@ -125,16 +125,16 @@ static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc,
 /* ── CAN Senders ── */
 void CAN_SendAsbStatus(void)
 {
-    can_tx_asb.asms_state          = SYS_GetASMS();
-    can_tx_asb.tsms_out            = !SYS_GetTSMS();
-    can_tx_asb.initial_checked     = (IC_GetState() == IC_NOTIFY_APU);
-    can_tx_asb.service_brake_status = ServiceBrake_State();
-    can_tx_asb.ebs_status          = EBS_IsActivated() ? 3U : 2U; /* TODO: make enum with ebs states*/
-    can_tx_asb.initial_check_step  = (uint8_t)IC_GetState();
+    can_tx_asb.asms_state             = SYS_GetASMS();
+    can_tx_asb.tsms_out               = !SYS_GetTSMS();
+    can_tx_asb.initial_checked        = (IC_GetState() == IC_NOTIFY_APU);
+    can_tx_asb.service_brake_status   = ServiceBrake_State();
+    can_tx_asb.ebs_status             = EBS_State(); 
+    can_tx_asb.initial_check_step     = (uint8_t)IC_GetState();
     can_tx_asb.monitor_tank_pressure  = Sensors_TankPressureValid(); /*TODO: Implement monitoring may */
     can_tx_asb.monitor_brake_pressure = true;   /* TODO: monitoring module */
-    can_tx_asb.monitor_apu           = CAN_IsAPUAlive(); /*TODO: Check after make the function */
-    can_tx_asb.ebs_tank_pressure     = (uint16_t)(Sensors_GetTankPressure1() * 100.0f);
+    can_tx_asb.monitor_apu            = CAN_IsAPUAlive(); /*TODO: Check after make the function */
+    can_tx_asb.ebs_tank_pressure      = (uint16_t)(Sensors_GetTankPressure1() * 100.0f);
 
     can_mcu_asb_pack(tx_data, &can_tx_asb, sizeof(tx_data));
     CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, tx_data);
