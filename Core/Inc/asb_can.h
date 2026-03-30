@@ -1,8 +1,6 @@
 #ifndef ASB_CAN_H
 #define ASB_CAN_H
-
 #include "main.h"
-#include "can_mcu.h"
 #include <stdbool.h>
 
 /* =========================================================
@@ -15,7 +13,9 @@ void CAN_App_Init(void);
 
 /* TX Tasks */
 void CAN_SendAsbStatus(void);
-void CAN_SendAsbDatalogger(void);
+
+/* RX Processing (called from HAL_CAN_RxFifo0MsgPendingCallback) */
+void CAN_ProcessRxMessage(void);
 
 /* RX Getters — APU */
 uint8_t CAN_GetASState(void);
@@ -30,11 +30,8 @@ int     CAN_GetServoCommand(void);
 float CAN_GetBrakePressureFront(void);
 float CAN_GetBrakePressureRear(void);
 
-/* APU Communication */
+/* Communication Alive Checks */
 bool CAN_IsAPUAlive(void);
-void CAN_ResetAPUTimer(void);
-
-uint8_t CAN_GetASState(void);
-void CAN_SetInitialChecked(bool checked);
+bool CAN_IsBrakePressureAlive(void);
 
 #endif /* ASB_CAN_H */
