@@ -6,16 +6,19 @@
 #include "asb_system.h"
 #include "main.h"
 #include "can_mcu.h"
+#include "asb_ebs.h"
 
 /* Private Variables */
 static bool sdc_is_closed     = false;
 static bool wdg_opm_enabled   = false;
 static bool wdg_is_running    = false;
+static bool manual_checked = false;
 
 /* External handles from main.c */
 extern TIM_HandleTypeDef htim3;
 extern struct can_mcu_apu_state_mission_t can_mcu_apu_state_mission;
 extern struct can_mcu_vcu_bools_t         can_mcu_vcu_bools;
+
 
 /* System Initialization */
 void ASB_System_Init(void) {
@@ -24,7 +27,7 @@ void ASB_System_Init(void) {
     wdg_is_running = false;
 
     HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
- }
+}
 
 /* SHUTDOWN CONTROL */
 
@@ -152,4 +155,38 @@ int SYS_GetSelectedMission(void)
         return MISSION_MANUAL;
     else
         return MISSION_NONE;
+}
+/* Manual Checks - Monitoring */
+
+/* Run — called from main loop every 10ms via timer flag */
+void Manual_Run(void)
+{
+    if (!manual_checked)
+    {
+        /* ASMS must be off, EBS must not be activated */
+        if (SYS_GetASMS() || EBS_IsActivated())
+        {
+            SDC_Open();
+            return;
+        }
+
+        /* Command SDC close */
+        SDC_Close();
+
+        /* Verify SDC is closed */
+        if (SYS_GetTSMS())
+            return;
+
+        manual_checked = true;
+    }
+    else
+    {
+        /* Monitoring — any violation → instant SDC open */
+        if (SYS_GetASMS() || EBS_State() != EBS_UNAVAILABLE ||
+            SYS_GetSelectedMission() != MISSION_MANUAL)
+        {
+            SDC_Open();
+            manual_checked = false;
+        }
+    }
 }

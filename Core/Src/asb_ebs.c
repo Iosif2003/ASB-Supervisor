@@ -4,6 +4,8 @@
  * ========================================================= */
 
 #include "asb_ebs.h"
+#include "asb_sensors.h"
+#include "asb_system.h"
 #include "main.h"
 #include <stdbool.h>
 
@@ -19,10 +21,22 @@ bool EBS_IsActivated(void)   { return ebs_is_activated;  }
 bool EBS_System1_State(void) { return ebs_system1_state; }
 bool EBS_System2_State(void) { return ebs_system2_state; }
 
-EBS_State_t EBS_State(void) { return EBS_state; }
+/* GET EBS STATE */
+EBS_State_t EBS_State(void) 
+{
+    if(!Sensors_TankPressureValid())            { EBS_state = EBS_UNAVAILABLE; }
+    
+    else if(ebs_is_activated || SYS_GetTSMS())  { EBS_state = EBS_TRIGGERED; }
+    
+    else { EBS_state = EBS_ARMED; }
+    
+    return EBS_state; 
+}
+
 /* EBS Initialization */
 void EBS_Init(void)
 {
+    EBS_state = EBS_UNAVAILABLE;
     ebs_is_activated  = true;
     ebs_system1_state = true;
     ebs_system2_state = true;
@@ -34,6 +48,7 @@ void EBS_Init(void)
 /* EBS Activation */
 void EBS_Activate(void)
 {
+    EBS_state = EBS_TRIGGERED;
     ebs_is_activated  = true;
     ebs_system1_state = true;
     ebs_system2_state = true;
@@ -76,8 +91,7 @@ void EBS_Release_System2(void)
 void EBS_Activate_System1(void)
 {
     ebs_system1_state = true;
-    if(ebs_system2_state)
-        ebs_is_activated = true;
+    ebs_is_activated = true;
 
     HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_RESET);
 }
@@ -86,8 +100,7 @@ void EBS_Activate_System1(void)
 void EBS_Activate_System2(void)
 {
     ebs_system2_state = true;
-    if(ebs_system1_state)
-        ebs_is_activated = true;
+    ebs_is_activated = true;
 
     HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
 }

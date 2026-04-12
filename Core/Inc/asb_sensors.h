@@ -2,6 +2,7 @@
 #define ASB_SENSORS_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /* =========================================================
  * ASB Sensors — asb_sensors.h
@@ -21,5 +22,7 @@ bool Sensors_TankPressureValid(void);
 bool Sensors_BrakePressureEngaged(void);
 bool Sensors_BrakePressureReleased(void);
 
+/* Update Sensor Values */
+void Sensors_Update(uint16_t *adc_buf);
 
 #endif /* ASB_SENSORS_H */
