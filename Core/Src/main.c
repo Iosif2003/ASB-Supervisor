@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "can_mcu.h"
 #include "stm32f4xx_hal.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -160,20 +161,42 @@ if (SYS_GetSelectedMission() == MISSION_AUTONOMOUS)
           switch (CAN_GetASState())
           {
               case 1U:  /* AS_Off */
-                if (WDG_IsOPMEnabled()) { WDG_DisableOPMode(); }
-                  IC_Run();
+                if (WDG_IsOPMEnabled()) { WDG_DisableOPMode(); } // Disable OPM if enabled
+                // TO DO: Set monitoring false if not already is
+                if (IC_GetState() < IC_SET_DIGPIN_HIGH) { SDC_Open(); } 
+                // Ensure SDC is open if initial check hasn't progressed past 
+                // the point of setting the digital pin high
+                IC_Run();   
+
                   break;
 
               case 2U:  /* AS_Ready */
-                  /* Monitoring active, waiting for go signal */
+              if (!WDG_IsOPMEnabled()) { WDG_EnableOPMode(); } // Enable OPM to start watchdog countdown 
+              // (safety mechanism in case something goes wrong after this point)
+              // TO DO: Set monitoring true if not already is
+              if ( ServiceBrake_State() != SERVICE_BRAKE_PARK) { ServiceBrake_Park(); } 
+              // Set service brake to park position as a safety measure 
+              // in case something goes wrong and the vehicle starts moving 
+              if (EBS_State() != EBS_ARMED) { SDC_Open(); } 
+              // Ensure SDC is open if EBS is not armed to prevent unintended braking
                   break;
 
               case 3U:  /* AS_Driving */
-                  break;
+              if (ServiceBrake_State() != SERVICE_BRAKE_AVAILABLE) { 
+                  ServiceBrake_Disengage();
+                  ServiceBrake_Available();
+               }  // Set service brake to available position to allow for braking when needed, 
+                  // but not applying pressure yet
+              
+              /* AS_FINISHED */
 
-              case 4U:  /* AS_Finished */
-                  EBS_Activate();
-                  SDC_Open();
+              if(CAN_GetASSetFinished() == CAN_MCU_APU_STATE_MISSION_AS_SET_FINISHED_SET__FINISHED__TRUE_CHOICE) {
+                EBS_Activate();
+                SDC_Open();
+                WDG_DisableOPMode();
+                  //TO DO: Set monitoring false because we are finished and we do not need to monitor anymore, also disable watchdog because we do not need it anymore and it could cause unintended resets if something goes wrong in the future but we are already finished
+              }   // If APU sends that the mission is finished, activate EBS and open SDC to ensure 
+                  // the vehicle is stopped, and disable watchdog as a safety measure since we are finished
                   break;
 
               case 5U:  /* AS_Emergency */

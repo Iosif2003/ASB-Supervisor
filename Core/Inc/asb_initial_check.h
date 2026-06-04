@@ -33,7 +33,6 @@ typedef enum {
     IC_NOTIFY_APU,
     IC_ENABLE_OPM,
     IC_COMPLETE,
-    IC_FAILED
 } IC_State_t;
 
 /* Initialization */

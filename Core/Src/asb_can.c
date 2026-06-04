@@ -127,7 +127,6 @@ void CAN_SendAsbStatus(void)
 {
     can_tx_asb.asms_state             = SYS_GetASMS();
     can_tx_asb.tsms_out               = !SYS_GetTSMS();
-    can_tx_asb.initial_checked        = (IC_GetState() == IC_NOTIFY_APU);
     can_tx_asb.service_brake_status   = ServiceBrake_State();
     can_tx_asb.ebs_status             = EBS_State(); 
     can_tx_asb.initial_check_step     = (uint8_t)IC_GetState();
@@ -135,6 +134,11 @@ void CAN_SendAsbStatus(void)
     can_tx_asb.monitor_brake_pressure = true;   /* TODO: monitoring module */
     can_tx_asb.monitor_apu            = CAN_IsAPUAlive(); /*TODO: Check after make the function */
     can_tx_asb.ebs_tank_pressure      = (uint16_t)(Sensors_GetTankPressure1() * 100.0f);
+    if(IC_GetState()>= IC_NOTIFY_APU) { can_tx_asb.initial_checked = true; }
+    else { can_tx_asb.initial_checked = false; }    
+    // This ensures that initial checked is only true when the state is IC_NOTIFY_APU or higher, 
+    // which means that the initial check process has been completed and the APU has been notified. 
+    // Before that, it is false to indicate that the initial check is not yet complete.
 
     can_mcu_asb_pack(tx_data, &can_tx_asb, sizeof(tx_data));
     CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, tx_data);

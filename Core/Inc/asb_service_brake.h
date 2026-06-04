@@ -12,7 +12,8 @@
 typedef enum {
     SERVICE_BRAKE_DISENGAGED = 1,  // DAC = 0    — no pressure
     SERVICE_BRAKE_ENGAGED    = 2,  // DAC = 4095 — full pressure
-    SERVICE_BRAKE_PARK       = 3   // DAC = 2000 — hold, vehicle stationary
+    SERVICE_BRAKE_PARK       = 3,   // DAC = 2000 — hold, vehicle stationary
+    SERVICE_BRAKE_AVAILABLE  = 4    
 } ServiceBrakeState_t;
 
 /* Initialization */
@@ -22,6 +23,7 @@ void ServiceBrake_Init(void);
 void ServiceBrake_Engage(void);
 void ServiceBrake_Disengage(void);
 void ServiceBrake_Park(void);
+void ServiceBrake_Available(void);
 
 /* Service Brake State */
 ServiceBrakeState_t ServiceBrake_State(void);

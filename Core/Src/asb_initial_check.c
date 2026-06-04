@@ -26,7 +26,7 @@ void IC_Init(void)
 /* IC Fail */
 static void IC_Fail(void)
 {
-    ic_state = IC_FAILED;
+    ic_state = IC_WAIT_MISSION; // Reset state machine to wait for mission selection again
     EBS_Activate();
     SDC_Open();
 }
@@ -191,12 +191,8 @@ void IC_Run(void)
             /* Signal APU via CAN (initial_checked = true when ic_state == IC_NOTIFY_APU).
             Wait for APU to transition to AS_Ready (state 2).
             timeout → fail */
-            if (CAN_GetASState() == 2U)    { ic_state = IC_ENABLE_OPM; }
+            if (CAN_GetASState() == 2U)    { ic_state = IC_COMPLETE; }
             else if (IC_TimerElapsed(ASB_IC_APU_READY_TIMEOUT_MS))    { IC_Fail(); }
-            break;
-        case IC_ENABLE_OPM:
-            WDG_EnableOPMode();
-            ic_state = IC_COMPLETE;
             break;
         }
 }

@@ -40,5 +40,11 @@ void ServiceBrake_Park(void)
     HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, ASB_SB_DAC_PARK);
 }
 
+void ServiceBrake_Available(void)
+{
+    service_brake_state = SERVICE_BRAKE_AVAILABLE;
+    // TO DO: Future implementation for available state, 
+    // or now it just sets the state without changing the DAC value}
+}
 /* Service Brake State */
 ServiceBrakeState_t ServiceBrake_State(void) { return service_brake_state; }
