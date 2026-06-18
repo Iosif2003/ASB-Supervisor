@@ -62,9 +62,6 @@ TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
 
-//	Debug Variables	//
-
-volatile int Debug_State;
 volatile int Initial_Check_Step;
 volatile int APU_Transition;
 
@@ -88,30 +85,7 @@ CAN_RxHeaderTypeDef msgHeaderRx;
 uint32_t txMailbox;
 uint8_t rxData[8] = {0};																								// Buffer for received data
 uint8_t txData[8] = {0};
-float Brake_Pressure;
 bool  Can_Error;
-volatile uint32_t Can_LastError;
-volatile uint32_t Can_LastEsr;
-volatile uint32_t Can_LastTsr;
-volatile uint32_t Can_LastLec;
-volatile uint32_t Can_LastTec;
-volatile uint32_t Can_LastRec;
-volatile uint32_t Can_LastBusOff;
-volatile uint32_t Can_LastErrorPassive;
-volatile uint32_t Can_LastErrorWarning;
-volatile uint32_t Can_DebugState;
-volatile uint32_t Can_DebugAttempts;
-volatile uint32_t Can_DebugSuccess;
-volatile uint32_t Can_DebugTimeouts;
-volatile uint32_t Can_DebugAddTxErrors;
-volatile uint32_t Can_DebugLastStdId;
-volatile uint32_t Can_DebugLastTsr;
-volatile uint32_t Can_DebugLastEsr;
-volatile uint32_t Can_DebugLastFreeLevel;
-volatile uint32_t Can_DebugTxCompleteCount;
-volatile uint32_t Can_DebugTxAbortCount;
-volatile uint32_t Can_DebugErrorCallbackCount;
-volatile uint32_t Can_DebugManualCheckState;
 struct can_mcu_apu_state_mission_t can_mcu_apu_state_mission;
 struct can_mcu_vcu_servo_control_t can_mcu_vcu_servo_control;
 struct can_mcu_vcu_bools_t can_mcu_vcu_bools;
@@ -143,6 +117,21 @@ float Voltage_Change_2;
 uint16_t ADC_Value_2;
 float Tank_Pressure_2;
 
+// Pressure actuators (Measurement Specialties M3041-000005-500PG) //
+// 0.5–4.5 V ratiometric @ 5 V supply, 0–500 PSI (≈ 0–34.4738 bar)
+// Hardware: 5 V sensor output is fed through ≈ 3.3/5 divider into the ADC,
+// so V_sensor = (raw/4095) * 3.3 * 1.5 and P_bar = (V_sensor - 0.5) * 8.6184
+uint16_t ADC_Pressure_Actuator_1_Raw;
+uint16_t ADC_Pressure_Actuator_2_Raw;
+float    Pressure_Actuator_1;	//bar
+float    Pressure_Actuator_2;	//bar
+
+// Debug Mode (manual EBS override) //
+// When Debug_Mode is true, the EBS_Activate outputs follow Debug_EBS_Active
+// (0 = release, 1 = activated). Toggle through the debugger.
+volatile bool Debug_Mode;
+volatile bool Debug_EBS_Active;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -160,7 +149,6 @@ static void MX_TIM5_Init(void);
 static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 
-static void CAN_UpdateDiagnostics(CAN_HandleTypeDef *hcan);
 static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc, const uint8_t *data, uint32_t *mailbox);
 static void CAN_SendAsbStatusTask(void);
 static void CAN_SendAsbDataloggerTask(void);
@@ -180,13 +168,6 @@ static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc, const
 	CAN_TxHeaderTypeDef txHeader = {0};
 	uint32_t startTick = HAL_GetTick();
 
-	Can_DebugAttempts++;
-	Can_DebugLastStdId = std_id;
-	Can_DebugLastTsr = hcan1.Instance->TSR;
-	Can_DebugLastEsr = hcan1.Instance->ESR;
-	Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(&hcan1);
-	Can_DebugState = 3100;
-	Debug_State = 2100;
 	txHeader.StdId = std_id;
 	txHeader.IDE = CAN_ID_STD;
 	txHeader.RTR = CAN_RTR_DATA;
@@ -194,53 +175,27 @@ static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc, const
 
 	while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0U)
 	{
-		Can_DebugLastTsr = hcan1.Instance->TSR;
-		Can_DebugLastEsr = hcan1.Instance->ESR;
-		Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(&hcan1);
-		Can_DebugState = 3101;
-		Debug_State = 2101;
 		if ((HAL_GetTick() - startTick) > 5U)
 		{
-			Can_DebugTimeouts++;
-			Can_DebugState = 3102;
-			Debug_State = 2102;
+			// All mailboxes stuck (e.g. bus disturbance). Abort the pending
+			// requests so they don't keep retrying / blocking, then drop.
+			HAL_CAN_AbortTxRequest(&hcan1, CAN_TX_MAILBOX0 | CAN_TX_MAILBOX1 | CAN_TX_MAILBOX2);
 			Can_Error = true;
-			CAN_UpdateDiagnostics(&hcan1);
 			return HAL_TIMEOUT;
 		}
 	}
 
-	Can_DebugLastTsr = hcan1.Instance->TSR;
-	Can_DebugLastEsr = hcan1.Instance->ESR;
-	Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(&hcan1);
-	Can_DebugState = 3103;
-	Debug_State = 2103;
 	if (HAL_CAN_AddTxMessage(&hcan1, &txHeader, (uint8_t *)data, mailbox) != HAL_OK)
 	{
-		Can_DebugAddTxErrors++;
-		Can_DebugLastTsr = hcan1.Instance->TSR;
-		Can_DebugLastEsr = hcan1.Instance->ESR;
-		Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(&hcan1);
-		Can_DebugState = 3104;
-		Debug_State = 2104;
 		Can_Error = true;
-		CAN_UpdateDiagnostics(&hcan1);
 		return HAL_ERROR;
 	}
 
-	Can_DebugSuccess++;
-	Can_DebugLastTsr = hcan1.Instance->TSR;
-	Can_DebugLastEsr = hcan1.Instance->ESR;
-	Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(&hcan1);
-	Can_DebugState = 3105;
-	Debug_State = 2105;
 	return HAL_OK;
 }
 
 static void CAN_SendAsbStatusTask(void)
 {
-	Can_DebugState = 3110;
-	Debug_State = 2110;
 	canTxStruct_asb.asms_state = ASMS_Out;
 	canTxStruct_asb.tsms_out = !(TSMS_Out_NOT);
 	canTxStruct_asb.initial_checked = Initial_Checked;
@@ -254,22 +209,13 @@ static void CAN_SendAsbStatusTask(void)
 	canTxStruct_asb.ebs_tank_pressure = Tank_Pressure * 100;
 
 	can_mcu_asb_pack(txData, &canTxStruct_asb, sizeof(txData));
-	Can_DebugState = 3111;
-	Debug_State = 2111;
-	if (CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, txData, &txMailbox) != HAL_OK)
-	{
-		Can_DebugState = 3112;
-		Debug_State = 2112;
-		Error_Handler();
-	}
-	Can_DebugState = 3113;
-	Debug_State = 2113;
+	// On a transient bus problem just drop this frame; never hang the node
+	// (a dead node stops participating and floods the bus with error frames).
+	(void)CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, txData, &txMailbox);
 }
 
 static void CAN_SendAsbDataloggerTask(void)
 {
-	Can_DebugState = 3120;
-	Debug_State = 2120;
 	canTxStruct_asb_datalogger.asms_out = ASMS_Out;
 	canTxStruct_asb_datalogger.ebs_pneumatic_pressure = Tank_Pressure;
 	canTxStruct_asb_datalogger.brake_pressure_rear = brake_pressure_rear;
@@ -286,16 +232,8 @@ static void CAN_SendAsbDataloggerTask(void)
 	canTxStruct_asb_datalogger.as_state = can_mcu_apu_state_mission.as_state;
 	
 	can_mcu_asb_datalogger_pack(txData, &canTxStruct_asb_datalogger, sizeof(txData));
-	Can_DebugState = 3121;
-	Debug_State = 2121;
-	if (CAN_SendStdMessage(CAN_MCU_ASB_DATALOGGER_FRAME_ID, CAN_MCU_ASB_DATALOGGER_LENGTH, txData, &txMailbox) != HAL_OK)
-	{
-		Can_DebugState = 3122;
-		Debug_State = 2122;
-		Error_Handler();
-	}
-	Can_DebugState = 3123;
-	Debug_State = 2123;
+	// Drop on transient failure instead of hanging the node (see note above).
+	(void)CAN_SendStdMessage(CAN_MCU_ASB_DATALOGGER_FRAME_ID, CAN_MCU_ASB_DATALOGGER_LENGTH, txData, &txMailbox);
 }
 
 /* USER CODE END 0 */
@@ -342,7 +280,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   Init_All();
   if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, ADC_BUFFER_SIZE) != HAL_OK)
-  		Debug_State = 214;  // DMA FAILS
+		Error_Handler();
 
   /* USER CODE END 2 */
 
@@ -351,10 +289,30 @@ int main(void)
   while (1)
   {
 
-	  if(Selected_Mission() == Autonomous){
+	  // ---- Debug Mode: manual EBS activation override ----
+	  if (Debug_Mode)
+	  {
+		  Monitoring = false;
+		  Initial_Checked = false;
+		  Manual_Initial_Checked = false;
+		  if (Debug_EBS_Active)
+		  {
+			  Valve1_GND = 0;
+			  Valve2_GND = 0;
+			  HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_RESET);
+			  HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
+		  }
+		  else
+		  {
+			  Valve1_GND = 1;
+			  Valve2_GND = 1;
+			  HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_SET);
+			  HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_SET);
+		  }
+	  }
+	  else if(Selected_Mission() == Autonomous){
 		  switch(can_mcu_apu_state_mission.as_state){
 		  case(AS_Off): 				// AS_OFF = 1 (CAN)
-		  Debug_State = 1;
 		  if ((htim3.Instance->CR1 & TIM_CR1_OPM) != 0){ 		 	//If One Pulse Mode is Enabled
 			  HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4); 	//Stop the timer (in case it expired we need to stop and start it again to work properly
 			  htim3.Instance->CR1 &= ~TIM_CR1_OPM; 		// Disable OPM
@@ -373,12 +331,10 @@ int main(void)
 
 
 		  case(AS_Driving):	 			// AS_Driving = 3 (CAN)
-		  Debug_State = 4;
 		  Value = 0;
 		  HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
 		  if(can_mcu_apu_state_mission.as_set_finished == CAN_MCU_APU_STATE_MISSION_AS_SET_FINISHED_SET__FINISHED__TRUE_CHOICE)
 		  {
-			  Debug_State = 5;
 			  Valve1_GND = 0;
 			  HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_RESET);
 			  Valve2_GND = 0;
@@ -397,7 +353,6 @@ int main(void)
 
 
 		  case(AS_Emergency):	 // AS_Emergency = 5 (CAN)	//We enter emergency if ebs is activated but vehicle is moving or mission is not finished
-		  Debug_State = 7;
 		  Monitoring = false;
 		  Valve1_GND = 0;
 		  HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_RESET);
@@ -410,7 +365,6 @@ int main(void)
 	  }
 	  else if(Selected_Mission() == Manual)			//Manual Mission received
 	  {
-		  Debug_State = 8;
 		  Initial_Check_Step = 100;
 		  Monitoring = false;
 		  //This ensures watchdog is Normal mode while we are running manual mode
@@ -453,12 +407,11 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;	// 8 MHz crystal -> accurate clock for 1 Mbit/s CAN
+  RCC_OscInitStruct.PLL.PLLM = 4;						// HSE 8 MHz / 4 = 2 MHz VCO in (same as before) -> 160 MHz SYSCLK
   RCC_OscInitStruct.PLL.PLLN = 160;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
@@ -512,7 +465,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
   hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T2_TRGO;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 2;
+  hadc1.Init.NbrOfConversion = 4;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -520,21 +473,34 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
 
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_14;
+  /** Rank 1: TankPressure1 (PA7 / ADC1_IN7) */
+  sConfig.Channel = ADC_CHANNEL_7;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
 
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_15;
+  /** Rank 2: TankPressure2 (PC4 / ADC1_IN14) */
+  sConfig.Channel = ADC_CHANNEL_14;
   sConfig.Rank = 2;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Rank 3: PressureActuator1 (PC5 / ADC1_IN15) */
+  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Rank = 3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Rank 4: PressureActuator2 (PB0 / ADC1_IN8) */
+  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Rank = 4;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -569,7 +535,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = ENABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
+  hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
@@ -655,7 +621,7 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;	// TIM2 update -> TRGO triggers ADC sequence
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
@@ -921,58 +887,48 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, EBS_Activate1_Pin|EBS_Activate2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(UserLed_GPIO_Port, UserLed_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, UserLed_Pin|AS_Relay_Signal_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, Valve2_GND_ST_Pin|Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pins : Interlock_Steering_Pin Interlock_Valve1_Pin */
-  GPIO_InitStruct.Pin = Interlock_Steering_Pin|Interlock_Valve1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : ASRelay_State_Pin */
-  GPIO_InitStruct.Pin = ASRelay_State_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(ASRelay_State_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : ASRelay_In_Pin ASRelay_Out_Pin TSMS_Out_NOT_Pin ASMS_Out_Pin */
-  GPIO_InitStruct.Pin = ASRelay_In_Pin|ASRelay_Out_Pin|TSMS_Out_NOT_Pin|ASMS_Out_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : UserLed_Pin */
-  GPIO_InitStruct.Pin = UserLed_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(UserLed_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : Interlock_valve2_Pin Interlock_PV_Pin */
-  GPIO_InitStruct.Pin = Interlock_valve2_Pin|Interlock_PV_Pin;
+  /*Configure GPIO pins : ASMS_Pin AS_Relay_OUT_Pin AS_Relay_IN_Pin Interlock_Steering_Pin */
+  GPIO_InitStruct.Pin = ASMS_Pin|AS_Relay_OUT_Pin|AS_Relay_IN_Pin|Interlock_Steering_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Valve2_GND_ST_Pin Valve1_GND_ST_Pin */
-  GPIO_InitStruct.Pin = Valve2_GND_ST_Pin|Valve1_GND_ST_Pin;
+  /*Configure GPIO pins : Interlock_Proportional_Pin Interlock_Valve2_Pin Interlock_Valve1_Pin */
+  GPIO_InitStruct.Pin = Interlock_Proportional_Pin|Interlock_Valve2_Pin|Interlock_Valve1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : EBS_Activate1_Pin EBS_Activate2_Pin */
+  GPIO_InitStruct.Pin = EBS_Activate1_Pin|EBS_Activate2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : UserLed_Pin AS_Relay_Signal_Pin */
+  GPIO_InitStruct.Pin = UserLed_Pin|AS_Relay_Signal_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : TSMS_Pin */
+  GPIO_InitStruct.Pin = TSMS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(TSMS_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -980,21 +936,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
-static void CAN_UpdateDiagnostics(CAN_HandleTypeDef *hcan)
-{
-	uint32_t esr = hcan->Instance->ESR;
-
-	Can_LastError = HAL_CAN_GetError(hcan);
-	Can_LastEsr = esr;
-	Can_LastTsr = hcan->Instance->TSR;
-	Can_LastLec = (esr & CAN_ESR_LEC) >> CAN_ESR_LEC_Pos;
-	Can_LastTec = (esr & CAN_ESR_TEC) >> CAN_ESR_TEC_Pos;
-	Can_LastRec = (esr & CAN_ESR_REC) >> CAN_ESR_REC_Pos;
-	Can_LastBusOff = ((esr & CAN_ESR_BOFF) != 0U);
-	Can_LastErrorPassive = ((esr & CAN_ESR_EPVF) != 0U);
-	Can_LastErrorWarning = ((esr & CAN_ESR_EWGF) != 0U);
-}
 
 int Selected_Mission(){
 	//Scenario where AS_Mission == 0 -> AS_Mission == No_Mission we should not enter autonomous nor manual mode so it is left out (return 0)
@@ -1008,8 +949,6 @@ int Selected_Mission(){
 }
 
 void As_Initial_Check(){
-
-	Debug_State = 2;
 
 	// activate EBS to ensure brakes engaged
 	Valve1_GND = 0;
@@ -1304,24 +1243,18 @@ bool Continuous_Monitoring()	// runs every 10 ms
 
 void Manual_Initial_Check()
 {
-	Debug_State = 9;
-	Can_DebugManualCheckState = 1;
 	Initial_Check_Step = 100;
 	ASRelay_State = 1;						//Close AS_Relay
 	HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_SET);
 
 	if((ASMS_Out == 1) || (Selected_Mission() != Manual) ||	(EBS_Status != EBS_Unavailable))//Ensure that nothing goes wrong until SDC closes
 	{
-		Can_DebugManualCheckState = 2;
 		ASRelay_State = 0;				//If an error case appeears open the SDC
 		HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
 		return;
 	}
 
-
-
 	Initial_Check_Step = 101;
-	Can_DebugManualCheckState = 4;
 	Manual_Initial_Checked = true; 			//This ensures that this function is entered only once
 	Initial_Checked = true;
 }
@@ -1345,7 +1278,6 @@ void Manual_Monitoring()
 				HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
 				Initial_Checked = false;
 				Manual_Initial_Checked = false;
-				Debug_State = 10;
 					}
 				}
 			}
@@ -1356,17 +1288,32 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
     if (hadc->Instance == ADC1)
     {
 		Tank_Pressure_Check_ms = 0;	//Monitoring functiion, each time a new value is received make it 0
-        // ADC conversion done - Channel 14 (PC4) - Tank Pressure
-        ADC_Value = adc_buffer[0];	//Storing the raw value of adc in ADC_Value
-		ADC_Voltage_Value = ((float)ADC_Value / 4095.0) * 3.3;	//Converts the adc raw value to voltage value
-		Voltage_Change = ADC_Voltage_Value * 1.5;				//Converts the voltage value from 0-3.3V -> 0-5 V as the pressure sensor outputs
-		Tank_Pressure = (2.5 * Voltage_Change) - 2.5;
 
-		// ADC conversion done - Channel 15 (PC5) - Tank Pressure 2
+		// Rank 1 - PA7 / IN7 - TankPressure1
+		ADC_Value = adc_buffer[0];
+		ADC_Voltage_Value = ((float)ADC_Value / 4095.0f) * 3.3f;
+		Voltage_Change = ADC_Voltage_Value * 1.5f;	//0-3.3V -> 0-5V (hardware divider)
+		Tank_Pressure = (2.5f * Voltage_Change) - 2.5f;
+
+		// Rank 2 - PC4 / IN14 - TankPressure2
 		ADC_Value_2 = adc_buffer[1];
-		ADC_Voltage_Value_2 = ((float)ADC_Value_2 / 4095.0) * 3.3;
-		Voltage_Change_2 = ADC_Voltage_Value_2 * 1.5;
-		Tank_Pressure_2 = (2.5 * Voltage_Change_2) - 2.5;
+		ADC_Voltage_Value_2 = ((float)ADC_Value_2 / 4095.0f) * 3.3f;
+		Voltage_Change_2 = ADC_Voltage_Value_2 * 1.5f;
+		Tank_Pressure_2 = (2.5f * Voltage_Change_2) - 2.5f;
+
+		// Rank 3 - PC5 / IN15 - PressureActuator1  (M3041 500PG, 0.5-4.5V -> 0-34.4738 bar)
+		ADC_Pressure_Actuator_1_Raw = adc_buffer[2];
+		{
+			float v_sensor = ((float)ADC_Pressure_Actuator_1_Raw / 4095.0f) * 3.3f * 1.5f;
+			Pressure_Actuator_1 = (v_sensor - 0.5f) * 8.6184f;
+		}
+
+		// Rank 4 - PB0 / IN8 - PressureActuator2
+		ADC_Pressure_Actuator_2_Raw = adc_buffer[3];
+		{
+			float v_sensor = ((float)ADC_Pressure_Actuator_2_Raw / 4095.0f) * 3.3f * 1.5f;
+			Pressure_Actuator_2 = (v_sensor - 0.5f) * 8.6184f;
+		}
     }
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -1404,7 +1351,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 				if(Continuous_Monitoring() == false || ASMS_Out == 0)
 				{
 					Monitoring = false; 			//This ensures monitoring function wont run again after failing
-					Debug_State = 1170;
 					Valve1_GND = 0;					//If an error occurs open SDC -> EBS Activated -> AS_Emergency
 					HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_RESET);
 					Valve2_GND = 0;
@@ -1418,8 +1364,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	if(htim->Instance == TIM5)	//20 ms period
 	{
-		Can_DebugState = 3130;
-		Debug_State = 2130;
 		CAN_SendAsbStatusTask();
 	}
 
@@ -1433,8 +1377,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	if(htim->Instance == TIM7)	//100ms
 	{
-		Can_DebugState = 3140;
-		Debug_State = 2140;
 		CAN_SendAsbDataloggerTask();
 
 		if(Manual_Initial_Checked == true)
@@ -1478,86 +1420,7 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 {
 	if (hcan->Instance == CAN1)
 	{
-		Can_DebugErrorCallbackCount++;
-		Can_DebugState = 3300;
-		Can_DebugLastTsr = hcan->Instance->TSR;
-		Can_DebugLastEsr = hcan->Instance->ESR;
-		Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(hcan);
 		Can_Error = true;
-		CAN_UpdateDiagnostics(hcan);
-		Debug_State = 304;
-	}
-}
-
-void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)
-{
-	if (hcan->Instance == CAN1)
-	{
-		Can_DebugTxCompleteCount++;
-		Can_DebugState = 3200;
-		Can_DebugLastTsr = hcan->Instance->TSR;
-		Can_DebugLastEsr = hcan->Instance->ESR;
-		Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(hcan);
-	}
-}
-
-void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan)
-{
-	if (hcan->Instance == CAN1)
-	{
-		Can_DebugTxCompleteCount++;
-		Can_DebugState = 3201;
-		Can_DebugLastTsr = hcan->Instance->TSR;
-		Can_DebugLastEsr = hcan->Instance->ESR;
-		Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(hcan);
-	}
-}
-
-void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan)
-{
-	if (hcan->Instance == CAN1)
-	{
-		Can_DebugTxCompleteCount++;
-		Can_DebugState = 3202;
-		Can_DebugLastTsr = hcan->Instance->TSR;
-		Can_DebugLastEsr = hcan->Instance->ESR;
-		Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(hcan);
-	}
-}
-
-void HAL_CAN_TxMailbox0AbortCallback(CAN_HandleTypeDef *hcan)
-{
-	if (hcan->Instance == CAN1)
-	{
-		Can_DebugTxAbortCount++;
-		Can_DebugState = 3210;
-		Can_DebugLastTsr = hcan->Instance->TSR;
-		Can_DebugLastEsr = hcan->Instance->ESR;
-		Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(hcan);
-	}
-}
-
-void HAL_CAN_TxMailbox1AbortCallback(CAN_HandleTypeDef *hcan)
-{
-	if (hcan->Instance == CAN1)
-	{
-		Can_DebugTxAbortCount++;
-		Can_DebugState = 3211;
-		Can_DebugLastTsr = hcan->Instance->TSR;
-		Can_DebugLastEsr = hcan->Instance->ESR;
-		Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(hcan);
-	}
-}
-
-void HAL_CAN_TxMailbox2AbortCallback(CAN_HandleTypeDef *hcan)
-{
-	if (hcan->Instance == CAN1)
-	{
-		Can_DebugTxAbortCount++;
-		Can_DebugState = 3212;
-		Can_DebugLastTsr = hcan->Instance->TSR;
-		Can_DebugLastEsr = hcan->Instance->ESR;
-		Can_DebugLastFreeLevel = HAL_CAN_GetTxMailboxesFreeLevel(hcan);
 	}
 }
 
@@ -1565,7 +1428,6 @@ void Init_All(){
 
 	//	VARIABLES	//
 
-	Debug_State = 0;					//No basic part of code has been entered
 	Initial_Checked = false;
 	ASMS_Out = 0;
 	TSMS_Out_NOT = 1;
@@ -1587,28 +1449,6 @@ void Init_All(){
 	Servo_Status = Servo_Disengaged;
 	Servo_Command = 1;
 	Can_Error = false;
-	Can_LastError = HAL_CAN_ERROR_NONE;
-	Can_LastEsr = 0;
-	Can_LastTsr = 0;
-	Can_LastLec = 0;
-	Can_LastTec = 0;
-	Can_LastRec = 0;
-	Can_LastBusOff = 0;
-	Can_LastErrorPassive = 0;
-	Can_LastErrorWarning = 0;
-	Can_DebugState = 0;
-	Can_DebugAttempts = 0;
-	Can_DebugSuccess = 0;
-	Can_DebugTimeouts = 0;
-	Can_DebugAddTxErrors = 0;
-	Can_DebugLastStdId = 0;
-	Can_DebugLastTsr = 0;
-	Can_DebugLastEsr = 0;
-	Can_DebugLastFreeLevel = 0;
-	Can_DebugTxCompleteCount = 0;
-	Can_DebugTxAbortCount = 0;
-	Can_DebugErrorCallbackCount = 0;
-	Can_DebugManualCheckState = 0;
 	Brake_Pressure = 0;
 	APU_Transition = true;
 
@@ -1622,6 +1462,8 @@ void Init_All(){
 
 	//	MONITORING	//
 
+	Debug_Mode = false;
+	Debug_EBS_Active = false;
 	Monitor_All = true;					//Initialize all checks to true (less fail points)
 	Monitoring = false;					//Start without monitoring
 	Watchdog_Check = true;

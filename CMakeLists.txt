@@ -17,11 +17,17 @@ else()
     set(_TC_PATH "")
 endif()
 
-set(CMAKE_C_COMPILER   ${_TC_PATH}${TOOLCHAIN_PREFIX}gcc)
-set(CMAKE_CXX_COMPILER ${_TC_PATH}${TOOLCHAIN_PREFIX}g++)
-set(CMAKE_ASM_COMPILER ${_TC_PATH}${TOOLCHAIN_PREFIX}gcc)
-set(CMAKE_OBJCOPY      ${_TC_PATH}${TOOLCHAIN_PREFIX}objcopy)
-set(CMAKE_SIZE         ${_TC_PATH}${TOOLCHAIN_PREFIX}size)
+if(WIN32)
+    set(_EXE ".exe")
+else()
+    set(_EXE "")
+endif()
+
+set(CMAKE_C_COMPILER   ${_TC_PATH}${TOOLCHAIN_PREFIX}gcc${_EXE})
+set(CMAKE_CXX_COMPILER ${_TC_PATH}${TOOLCHAIN_PREFIX}g++${_EXE})
+set(CMAKE_ASM_COMPILER ${_TC_PATH}${TOOLCHAIN_PREFIX}gcc${_EXE})
+set(CMAKE_OBJCOPY      ${_TC_PATH}${TOOLCHAIN_PREFIX}objcopy${_EXE})
+set(CMAKE_SIZE         ${_TC_PATH}${TOOLCHAIN_PREFIX}size${_EXE})
 
 # Prevent CMake from testing the compiler with a full executable link
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
