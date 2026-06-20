@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,6 +52,7 @@ DAC_HandleTypeDef hdac;
 // Set Debug_DAC_Value from the debugger (0..4095, 12-bit right aligned) and it
 // is written to DAC_OUT1 (PA4) on every loop iteration. Nothing else runs.
 volatile uint16_t Debug_DAC_Value = 0;
+bool d1, d2;
 
 /* USER CODE END PV */
 
@@ -110,8 +112,8 @@ int main(void)
   {
     // Output whatever value the debugger has placed in Debug_DAC_Value.
     HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Debug_DAC_Value);
-	HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, d1);
+	HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, d2);
 
     /* USER CODE END WHILE */
 
