@@ -56,6 +56,7 @@ volatile uint16_t Debug_DAC_Value = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
 static void MX_DAC_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -94,6 +95,7 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
+  MX_GPIO_Init();
   MX_DAC_Init();
   /* USER CODE BEGIN 2 */
   if (HAL_DAC_Start(&hdac, DAC_CHANNEL_1) != HAL_OK)
@@ -108,6 +110,9 @@ int main(void)
   {
     // Output whatever value the debugger has placed in Debug_DAC_Value.
     HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Debug_DAC_Value);
+	HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -199,6 +204,29 @@ static void MX_DAC_Init(void)
 
   /* USER CODE END DAC_Init 2 */
 
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, Valve1_GND_ST_Pin|Valve2_GND_ST_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : Valve1_GND_ST_Pin Valve2_GND_ST_Pin */
+  GPIO_InitStruct.Pin = Valve1_GND_ST_Pin|Valve2_GND_ST_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
 /* USER CODE BEGIN 4 */

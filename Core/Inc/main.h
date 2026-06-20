@@ -59,6 +59,10 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define Proportional_Signal_Pin GPIO_PIN_4
 #define Proportional_Signal_GPIO_Port GPIOA
+#define Valve1_GND_ST_Pin GPIO_PIN_5
+#define Valve1_GND_ST_GPIO_Port GPIOA
+#define Valve2_GND_ST_Pin GPIO_PIN_6
+#define Valve2_GND_ST_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 
