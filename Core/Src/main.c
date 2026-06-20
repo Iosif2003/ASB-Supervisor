@@ -197,7 +197,7 @@ static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc, const
 static void CAN_SendAsbStatusTask(void)
 {
 	canTxStruct_asb.asms_state = ASMS_Out;
-	canTxStruct_asb.tsms_out = !(TSMS_Out_NOT);
+	canTxStruct_asb.tsms_out = TSMS_Out_NOT;
 	canTxStruct_asb.initial_checked = Initial_Checked;
 	canTxStruct_asb.service_brake_status = Servo_Status;
 	canTxStruct_asb.ebs_status = EBS_Status;
@@ -290,27 +290,7 @@ int main(void)
   {
 
 	  // ---- Debug Mode: manual EBS activation override ----
-	  if (Debug_Mode)
-	  {
-		  Monitoring = false;
-		  Initial_Checked = false;
-		  Manual_Initial_Checked = false;
-		  if (Debug_EBS_Active)
-		  {
-			  Valve1_GND = 0;
-			  Valve2_GND = 0;
-			  HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-			  HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
-		  }
-		  else
-		  {
-			  Valve1_GND = 1;
-			  Valve2_GND = 1;
-			  HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_SET);
-			  HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_SET);
-		  }
-	  }
-	  else if(Selected_Mission() == Autonomous){
+	if(Selected_Mission() == Autonomous){
 		  switch(can_mcu_apu_state_mission.as_state){
 		  case(AS_Off): 				// AS_OFF = 1 (CAN)
 		  if ((htim3.Instance->CR1 & TIM_CR1_OPM) != 0){ 		 	//If One Pulse Mode is Enabled
@@ -1014,7 +994,7 @@ void As_Initial_Check(){
 	do{
 		if(ASMS_Out != 1	||	Selected_Mission() != Autonomous || 	ASRelay_Out != 1)	//From now on we check AS_Relay_Out only inste of IN=0 -> OUT=0 as well so it is included
 			return;
-	}while(TSMS_Out_NOT != 0);					//TSMS is the last part of the SDC so TSMS high means we have closed SDC
+	}while(TSMS_Out_NOT == 0);					//TSMS is the last part of the SDC so TSMS high means we have closed SDC
 
 	//	DE-ACTIVATE EBS	//
 
@@ -1027,7 +1007,7 @@ void As_Initial_Check(){
 		HAL_Delay(700);
 
 		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT != 0)	//TSMS_Out_NOT is after AS_Relay_Out on our vehicle SDC so checking that includes AS_Relay_Out and therefore in as well
+			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT == 0)	//TSMS_Out_NOT is after AS_Relay_Out on our vehicle SDC so checking that includes AS_Relay_Out and therefore in as well
 				return;
 		}while(Brake_Pressure > 3);
 
@@ -1040,9 +1020,9 @@ void As_Initial_Check(){
 		HAL_Delay(700);
 
 		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT != 0)
+			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT == 0)
 				return;
-		}while(Brake_Pressure < 5);			// IT DEEDS SETTING
+		}while(Brake_Pressure < 1);			// IT DEEDS SETTING
 
 	//	DE-ACTIVATE EBS	//
 
@@ -1053,7 +1033,7 @@ void As_Initial_Check(){
 		HAL_Delay(700);
 
 		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT != 0)
+			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT == 0)
 				return;
 		}while(Brake_Pressure > 3);
 
@@ -1066,9 +1046,9 @@ void As_Initial_Check(){
 		HAL_Delay(700);
 
 		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT != 0)
+			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT == 0)
 				return;
-		}while(Brake_Pressure < 5);		// IT DEEDS SETTING
+		}while(Brake_Pressure < 1);		// IT DEEDS SETTING
 
 		// DE-ACTIVATE EBS //
 
@@ -1079,7 +1059,7 @@ void As_Initial_Check(){
 		HAL_Delay(700);
 
 		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT != 0)
+			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT == 0)
 				return;
 		}while(Brake_Pressure > 3);
 
@@ -1093,9 +1073,9 @@ void As_Initial_Check(){
 		HAL_Delay(700);
 
 		do{
-		if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT != 0)
+		if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT == 0)
 			return;
-		}while(Brake_Pressure < 5);
+		}while(Brake_Pressure < 1);
 
 		// De-ACTIVATE SERVICE BRAKE //
 
@@ -1107,7 +1087,7 @@ void As_Initial_Check(){
 		HAL_Delay(700);
 
 		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT != 0)
+			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT == 0)
 				return;
 		}while(Brake_Pressure > 3);
 
@@ -1338,7 +1318,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		//	EBS STATE	//
 		if(Tank_Pressure < Tank_Pressure_min)
 			EBS_Status = EBS_Unavailable;						//We do not have the sufficient tank pressure to consider ebs triggered when activated (it may be activated but brake pressure will me minimal)
-		else if(TSMS_Out_NOT == 1 || Valve1_GND == 0 || Valve2_GND == 0)	//No SDC or EBS Activated -> EBS Activated + Enough Tank Presure -> EBS Triggered (What about mechanical Valve)
+		else if(TSMS_Out_NOT == 0 || Valve1_GND == 0 || Valve2_GND == 0)	//No SDC or EBS Activated -> EBS Activated + Enough Tank Presure -> EBS Triggered (What about mechanical Valve)
 			EBS_Status = EBS_Triggered;
 		else
 			EBS_Status = EBS_Armed;								//Tank Pressure sufficient + SDC + EBS Not Activated -> Armed = Ready to be commanded and functional
