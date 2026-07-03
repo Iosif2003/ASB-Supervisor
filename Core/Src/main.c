@@ -33,6 +33,7 @@
 #include "asb_sensors.h"
 #include "asb_service_brake.h"
 #include "asb_initial_check.h"
+#include "asb_monitoring.h"
 
 /* USER CODE END Includes */
 
@@ -53,7 +54,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
 
 CAN_HandleTypeDef hcan1;
 
@@ -67,13 +67,20 @@ TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
-uint32_t adc_buffer[ASB_ADC_BUFFER_SIZE];
+
+//ADC buffer for tank pressure readings
+uint16_t adc_buffer[ASB_ADC_BUFFER_SIZE];
+
+// ISRs
+static volatile bool tick_10ms  = false;
+static volatile bool tick_20ms  = false;
+static volatile bool tick_100ms = false;
+static bool monitoring = false;   /* armed at AS_Ready; αν σπάσει check → EBS + SDC open */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_DAC_Init(void);
@@ -121,7 +128,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_ADC1_Init();
   MX_CAN1_Init();
   MX_DAC_Init();
@@ -140,6 +146,7 @@ int main(void)
   ServiceBrake_Init();
   CAN_App_Init();
   IC_Init();
+  Monitor_Init();
 
   /* Start peripherals */
   HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_buffer, ASB_ADC_BUFFER_SIZE);
@@ -156,62 +163,84 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-if (SYS_GetSelectedMission() == MISSION_AUTONOMOUS)
+
+    if (tick_10ms)
+    {
+      tick_10ms = false;
+      Inputs_Sample();
+      if (SYS_GetSelectedMission() == MISSION_AUTONOMOUS)
       {
-          switch (CAN_GetASState())
+        switch (CAN_GetASState())
           {
-              case 1U:  /* AS_Off */
-                if (WDG_IsOPMEnabled()) { WDG_DisableOPMode(); } // Disable OPM if enabled
-                // TO DO: Set monitoring false if not already is
-                if (IC_GetState() < IC_SET_DIGPIN_HIGH) { SDC_Open(); } 
-                // Ensure SDC is open if initial check hasn't progressed past 
-                // the point of setting the digital pin high
-                IC_Run();   
+            case 1U:  /* AS_Off */
+            if (IC_GetState() < IC_SET_DIGPIN_HIGH) { SDC_Open(); } 
+            // Ensure SDC is open if initial check hasn't progressed past 
+            // the point of setting the digital pin high
+            IC_Run();
+            monitoring = false;
 
-                  break;
+            break;
 
-              case 2U:  /* AS_Ready */
-              if (!WDG_IsOPMEnabled()) { WDG_EnableOPMode(); } // Enable OPM to start watchdog countdown 
-              // (safety mechanism in case something goes wrong after this point)
-              // TO DO: Set monitoring true if not already is
-              if ( ServiceBrake_State() != SERVICE_BRAKE_PARK) { ServiceBrake_Park(); } 
-              // Set service brake to park position as a safety measure 
-              // in case something goes wrong and the vehicle starts moving 
-              if (EBS_State() != EBS_ARMED) { SDC_Open(); } 
-              // Ensure SDC is open if EBS is not armed to prevent unintended braking
-                  break;
+            case 2U:  /* AS_Ready */
+            if ( ServiceBrake_State() != SERVICE_BRAKE_PARK) { ServiceBrake_Park(); } 
+            // Set service brake to park position as a safety measure 
+            // in case something goes wrong and the vehicle starts moving 
+            if (EBS_State() != EBS_ARMED) { SDC_Open(); } 
+            // Ensure SDC is open if EBS is not armed to prevent unintended braking
+            monitoring = true;
 
-              case 3U:  /* AS_Driving */
-              if (ServiceBrake_State() != SERVICE_BRAKE_AVAILABLE) { 
-                  ServiceBrake_Disengage();
-                  ServiceBrake_Available();
-               }  // Set service brake to available position to allow for braking when needed, 
-                  // but not applying pressure yet
-              
-              /* AS_FINISHED */
+            break;
 
-              if(CAN_GetASSetFinished() == CAN_MCU_APU_STATE_MISSION_AS_SET_FINISHED_SET__FINISHED__TRUE_CHOICE) {
-                EBS_Activate();
-                SDC_Open();
-                WDG_DisableOPMode();
-                  //TO DO: Set monitoring false because we are finished and we do not need to monitor anymore, also disable watchdog because we do not need it anymore and it could cause unintended resets if something goes wrong in the future but we are already finished
-              }   // If APU sends that the mission is finished, activate EBS and open SDC to ensure 
-                  // the vehicle is stopped, and disable watchdog as a safety measure since we are finished
-                  break;
+            case 3U:  /* AS_Driving */
+            if (ServiceBrake_State() != SERVICE_BRAKE_AVAILABLE) 
+            { 
+              ServiceBrake_Disengage();
+              ServiceBrake_Available();
+            }  // Set service brake to available position to allow for braking when needed, 
+               // but not applying pressure yet
+                      
+            /* AS_FINISHED */
 
-              case 5U:  /* AS_Emergency */
-                  EBS_Activate();
-                  SDC_Open();
-                  break;
+            if(CAN_GetASSetFinished() == CAN_MCU_APU_STATE_MISSION_AS_SET_FINISHED_SET__FINISHED__TRUE_CHOICE) 
+            {
+              EBS_Activate();
+              SDC_Open();
+            }   // If APU sends that the mission is finished, activate EBS and open SDC to ensure 
+                // the vehicle is stopped, and disable watchdog as a safety measure since we are finished
+            
+            break;
 
-              default:
-                  break;
-          }	
-		}
+            case 5U:  /* AS_Emergency */
+            EBS_Activate();
+            SDC_Open();
+            monitoring = false;
+
+            break;
+
+            default:
+
+            break;
+          }
+
+          /* Continuous monitoring — αν σπάσει armed check → EBS + open SDC */
+          if (monitoring && !Monitor_Run()) { EBS_Activate(); SDC_Open(); }
+        }
+      else if (SYS_GetSelectedMission() == MISSION_MANUAL)
+      {
+       Manual_Run();
+      }
+
+      WDG_Reset();  
+    }     
+    
+    if (tick_20ms)  { tick_20ms  = false; CAN_SendAsbStatus(); }
+
+    if (tick_100ms) { tick_100ms = false; /* CAN_SendDatalogger();  <- κατηγορία E */ }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+  
+}
   /* USER CODE END 3 */
 }
 
@@ -286,10 +315,10 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ENABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T2_TRGO;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 2;
   hadc1.Init.DMAContinuousRequests = ENABLE;
@@ -301,19 +330,15 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_14;
+  sConfig.Channel = ADC_CHANNEL_15;   /* PC5 = TankPressure1 → adc_buffer[0] */
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
-
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Channel = ADC_CHANNEL_8;    /* PB0 = TankPressure2 → adc_buffer[1] */
   sConfig.Rank = 2;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -348,7 +373,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = ENABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
-  hcan1.Init.AutoRetransmission = ENABLE;
+  hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
@@ -434,7 +459,7 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
@@ -484,7 +509,11 @@ static void MX_TIM3_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  if (HAL_TIM_OnePulse_Init(&htim3, TIM_OPMODE_SINGLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
   {
@@ -672,22 +701,6 @@ static void MX_TIM7_Init(void)
 }
 
 /**
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void)
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA2_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA2_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-
-}
-
-/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -700,58 +713,48 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, EBS_Valve1_GND_Pin|EBS_Valve2_GND_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(UserLed_GPIO_Port, UserLed_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, UserLed_Pin|AS_Relay_Signal_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, Valve2_GND_ST_Pin|Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pins : Interlock_Steering_Pin Interlock_Valve1_Pin */
-  GPIO_InitStruct.Pin = Interlock_Steering_Pin|Interlock_Valve1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : ASRelay_State_Pin */
-  GPIO_InitStruct.Pin = ASRelay_State_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(ASRelay_State_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : ASRelay_In_Pin ASRelay_Out_Pin TSMS_Out_NOT_Pin ASMS_Out_Pin */
-  GPIO_InitStruct.Pin = ASRelay_In_Pin|ASRelay_Out_Pin|TSMS_Out_NOT_Pin|ASMS_Out_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : UserLed_Pin */
-  GPIO_InitStruct.Pin = UserLed_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(UserLed_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : Interlock_valve2_Pin Interlock_PV_Pin */
-  GPIO_InitStruct.Pin = Interlock_valve2_Pin|Interlock_PV_Pin;
+  /*Configure GPIO pins : ASMS_Pin AS_Relay_Out_Pin AS_Relay_In_Pin Interlock_Steering_Pin */
+  GPIO_InitStruct.Pin = ASMS_Pin|AS_Relay_Out_Pin|AS_Relay_In_Pin|Interlock_Steering_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Valve2_GND_ST_Pin Valve1_GND_ST_Pin */
-  GPIO_InitStruct.Pin = Valve2_GND_ST_Pin|Valve1_GND_ST_Pin;
+  /*Configure GPIO pins : Interlock_Proportional_Pin Interlock_Valve2_Pin Interlock_Valve1_Pin */
+  GPIO_InitStruct.Pin = Interlock_Proportional_Pin|Interlock_Valve2_Pin|Interlock_Valve1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : EBS_Valve1_GND_Pin EBS_Valve2_GND_Pin */
+  GPIO_InitStruct.Pin = EBS_Valve1_GND_Pin|EBS_Valve2_GND_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : UserLed_Pin AS_Relay_Signal_Pin */
+  GPIO_InitStruct.Pin = UserLed_Pin|AS_Relay_Signal_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : TSMS_Pin */
+  GPIO_InitStruct.Pin = TSMS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(TSMS_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -759,6 +762,14 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+/*ISRs for timer callbacks*/
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if      (htim->Instance == TIM4) { tick_10ms  = true; }   /* 10 ms  */
+    else if (htim->Instance == TIM5) { tick_20ms  = true; }   /* 20 ms  */
+    else if (htim->Instance == TIM7) { tick_100ms = true; }   /* 100 ms */
+}
 
 /* CAN RΧ */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)

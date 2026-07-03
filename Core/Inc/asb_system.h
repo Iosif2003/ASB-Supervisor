@@ -16,13 +16,12 @@ void SDC_Close(void);
 void SDC_Open(void);
 
 /* Watchdog Control */
-void WDG_EnableOPMode(void);
-void WDG_DisableOPMode(void);
 void WDG_Reset(void);
 void WDG_Stop(void);
 void WDG_Start(void);
 
 /* GPIO Input Reads */
+void Inputs_Sample(void);
 bool SYS_GetASMS(void);
 bool SYS_GetTSMS(void);
 bool SYS_GetASRelayIn(void);
@@ -34,7 +33,6 @@ bool SYS_GetInterlockSteering(void);
 
 /* States */
 bool SDC_IsClosed(void);
-bool WDG_IsOPMEnabled(void);
 bool WDG_IsRunning(void);
 
 /* Mission Selection */
@@ -46,6 +44,8 @@ typedef enum {
 
 int SYS_GetSelectedMission(void);
  
+void Manual_Run(void);
+
 #endif /* ASB_SYSTEM_H */
 
 

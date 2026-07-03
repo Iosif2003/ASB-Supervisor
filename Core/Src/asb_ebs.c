@@ -41,8 +41,8 @@ void EBS_Init(void)
     ebs_system1_state = true;
     ebs_system2_state = true;
 
-    HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(EBS_Valve1_GND_GPIO_Port, EBS_Valve1_GND_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(EBS_Valve2_GND_GPIO_Port, EBS_Valve2_GND_Pin, GPIO_PIN_RESET);
 }
 
 /* EBS Activation */
@@ -53,8 +53,8 @@ void EBS_Activate(void)
     ebs_system1_state = true;
     ebs_system2_state = true;
 
-    HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(EBS_Valve1_GND_GPIO_Port, EBS_Valve1_GND_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(EBS_Valve2_GND_GPIO_Port, EBS_Valve2_GND_Pin, GPIO_PIN_RESET);
 }
 
 /* EBS Release All */
@@ -64,8 +64,8 @@ void EBS_Release_All(void)
     ebs_system2_state = false;
     ebs_is_activated  = false;
 
-    HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(EBS_Valve1_GND_GPIO_Port, EBS_Valve1_GND_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(EBS_Valve2_GND_GPIO_Port, EBS_Valve2_GND_Pin, GPIO_PIN_SET);
 }
 
 /* EBS Release System 1 */
@@ -74,7 +74,7 @@ void EBS_Release_System1(void)
     ebs_system1_state = false;
     if(!ebs_system2_state)
         ebs_is_activated = false;
-    HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(EBS_Valve1_GND_GPIO_Port, EBS_Valve1_GND_Pin, GPIO_PIN_SET);
 }
 
 /* EBS Release System 2 */
@@ -84,7 +84,7 @@ void EBS_Release_System2(void)
     if(!ebs_system1_state)
         ebs_is_activated = false;
 
-    HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(EBS_Valve2_GND_GPIO_Port, EBS_Valve2_GND_Pin, GPIO_PIN_SET);
 }
 
 /* EBS Activate System 1 */
@@ -93,7 +93,7 @@ void EBS_Activate_System1(void)
     ebs_system1_state = true;
     ebs_is_activated = true;
 
-    HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(EBS_Valve1_GND_GPIO_Port, EBS_Valve1_GND_Pin, GPIO_PIN_RESET);
 }
 
 /* EBS Activate System 2 */
@@ -102,5 +102,5 @@ void EBS_Activate_System2(void)
     ebs_system2_state = true;
     ebs_is_activated = true;
 
-    HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(EBS_Valve2_GND_GPIO_Port, EBS_Valve2_GND_Pin, GPIO_PIN_RESET);
 }

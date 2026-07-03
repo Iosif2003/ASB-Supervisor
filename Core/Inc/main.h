@@ -70,38 +70,38 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define Interlock_Steering_Pin GPIO_PIN_1
-#define Interlock_Steering_GPIO_Port GPIOA
-#define ASRelay_State_Pin GPIO_PIN_2
-#define ASRelay_State_GPIO_Port GPIOA
-#define PrAnagSignal_Pin GPIO_PIN_4
-#define PrAnagSignal_GPIO_Port GPIOA
-#define TankPrServBrake_Pin GPIO_PIN_4
-#define TankPrServBrake_GPIO_Port GPIOC
-#define PrSenServBrake_Pin GPIO_PIN_5
-#define PrSenServBrake_GPIO_Port GPIOC
-#define ASRelay_In_Pin GPIO_PIN_12
-#define ASRelay_In_GPIO_Port GPIOB
-#define ASRelay_Out_Pin GPIO_PIN_13
-#define ASRelay_Out_GPIO_Port GPIOB
-#define TSMS_Out_NOT_Pin GPIO_PIN_14
-#define TSMS_Out_NOT_GPIO_Port GPIOB
-#define ASMS_Out_Pin GPIO_PIN_15
-#define ASMS_Out_GPIO_Port GPIOB
-#define UserLed_Pin GPIO_PIN_6
-#define UserLed_GPIO_Port GPIOC
+#define ASMS_Pin GPIO_PIN_13
+#define ASMS_GPIO_Port GPIOC
+#define AS_Relay_Out_Pin GPIO_PIN_1
+#define AS_Relay_Out_GPIO_Port GPIOC
+#define AS_Relay_In_Pin GPIO_PIN_2
+#define AS_Relay_In_GPIO_Port GPIOC
+#define Interlock_Steering_Pin GPIO_PIN_3
+#define Interlock_Steering_GPIO_Port GPIOC
+#define Interlock_Proportional_Pin GPIO_PIN_0
+#define Interlock_Proportional_GPIO_Port GPIOA
+#define Interlock_Valve2_Pin GPIO_PIN_1
+#define Interlock_Valve2_GPIO_Port GPIOA
+#define Interlock_Valve1_Pin GPIO_PIN_2
+#define Interlock_Valve1_GPIO_Port GPIOA
+#define Proportional_Signal_Pin GPIO_PIN_4
+#define Proportional_Signal_GPIO_Port GPIOA
+#define EBS_Valve1_GND_Pin GPIO_PIN_5
+#define EBS_Valve1_GND_GPIO_Port GPIOA
+#define EBS_Valve2_GND_Pin GPIO_PIN_6
+#define EBS_Valve2_GND_GPIO_Port GPIOA
+#define TankPressure1_Pin GPIO_PIN_5
+#define TankPressure1_GPIO_Port GPIOC
+#define TankPressure2_Pin GPIO_PIN_0
+#define TankPressure2_GPIO_Port GPIOB
+#define UserLed_Pin GPIO_PIN_12
+#define UserLed_GPIO_Port GPIOB
+#define AS_Relay_Signal_Pin GPIO_PIN_13
+#define AS_Relay_Signal_GPIO_Port GPIOB
 #define WatchdogPWM_Pin GPIO_PIN_9
 #define WatchdogPWM_GPIO_Port GPIOC
-#define Interlock_Valve1_Pin GPIO_PIN_15
-#define Interlock_Valve1_GPIO_Port GPIOA
-#define Interlock_valve2_Pin GPIO_PIN_10
-#define Interlock_valve2_GPIO_Port GPIOC
-#define Interlock_PV_Pin GPIO_PIN_11
-#define Interlock_PV_GPIO_Port GPIOC
-#define Valve2_GND_ST_Pin GPIO_PIN_5
-#define Valve2_GND_ST_GPIO_Port GPIOB
-#define Valve1_GND_ST_Pin GPIO_PIN_6
-#define Valve1_GND_ST_GPIO_Port GPIOB
+#define TSMS_Pin GPIO_PIN_9
+#define TSMS_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

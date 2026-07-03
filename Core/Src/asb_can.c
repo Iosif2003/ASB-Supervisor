@@ -130,9 +130,6 @@ void CAN_SendAsbStatus(void)
     can_tx_asb.service_brake_status   = ServiceBrake_State();
     can_tx_asb.ebs_status             = EBS_State(); 
     can_tx_asb.initial_check_step     = (uint8_t)IC_GetState();
-    can_tx_asb.monitor_tank_pressure  = Sensors_TankPressureValid(); /*TODO: Implement monitoring may */
-    can_tx_asb.monitor_brake_pressure = true;   /* TODO: monitoring module */
-    can_tx_asb.monitor_apu            = CAN_IsAPUAlive(); /*TODO: Check after make the function */
     can_tx_asb.ebs_tank_pressure      = (uint16_t)(Sensors_GetTankPressure1() * 100.0f);
     if(IC_GetState()>= IC_NOTIFY_APU) { can_tx_asb.initial_checked = true; }
     else { can_tx_asb.initial_checked = false; }    
@@ -235,6 +232,6 @@ bool CAN_IsAPUAlive(void)
 
 bool CAN_IsBrakePressureAlive(void)
 {
-    return (HAL_GetTick() - brake_last_rx_tick < 400U);
+    return (HAL_GetTick() - brake_last_rx_tick < 100U);  /* Sheet 8: dashboard @10ms, timeout 100ms */
 }
 

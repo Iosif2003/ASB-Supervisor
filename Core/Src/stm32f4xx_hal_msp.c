@@ -23,7 +23,6 @@
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
-extern DMA_HandleTypeDef hdma_adc1;
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
@@ -98,33 +97,20 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     __HAL_RCC_ADC1_CLK_ENABLE();
 
     __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
     /**ADC1 GPIO Configuration
-    PC4     ------> ADC1_IN14
     PC5     ------> ADC1_IN15
+    PB0     ------> ADC1_IN8
     */
-    GPIO_InitStruct.Pin = TankPrServBrake_Pin|PrSenServBrake_Pin;
+    GPIO_InitStruct.Pin = TankPressure1_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    HAL_GPIO_Init(TankPressure1_GPIO_Port, &GPIO_InitStruct);
 
-    /* ADC1 DMA Init */
-    /* ADC1 Init */
-    hdma_adc1.Instance = DMA2_Stream0;
-    hdma_adc1.Init.Channel = DMA_CHANNEL_0;
-    hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_adc1.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_adc1.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_adc1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_adc1.Init.Mode = DMA_CIRCULAR;
-    hdma_adc1.Init.Priority = DMA_PRIORITY_LOW;
-    hdma_adc1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-    if (HAL_DMA_Init(&hdma_adc1) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    __HAL_LINKDMA(hadc,DMA_Handle,hdma_adc1);
+    GPIO_InitStruct.Pin = TankPressure2_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(TankPressure2_GPIO_Port, &GPIO_InitStruct);
 
     /* USER CODE BEGIN ADC1_MspInit 1 */
 
@@ -151,13 +137,13 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
     __HAL_RCC_ADC1_CLK_DISABLE();
 
     /**ADC1 GPIO Configuration
-    PC4     ------> ADC1_IN14
     PC5     ------> ADC1_IN15
+    PB0     ------> ADC1_IN8
     */
-    HAL_GPIO_DeInit(GPIOC, TankPrServBrake_Pin|PrSenServBrake_Pin);
+    HAL_GPIO_DeInit(TankPressure1_GPIO_Port, TankPressure1_Pin);
 
-    /* ADC1 DMA DeInit */
-    HAL_DMA_DeInit(hadc->DMA_Handle);
+    HAL_GPIO_DeInit(TankPressure2_GPIO_Port, TankPressure2_Pin);
+
     /* USER CODE BEGIN ADC1_MspDeInit 1 */
 
     /* USER CODE END ADC1_MspDeInit 1 */
@@ -260,10 +246,10 @@ void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
     /**DAC GPIO Configuration
     PA4     ------> DAC_OUT1
     */
-    GPIO_InitStruct.Pin = PrAnagSignal_Pin;
+    GPIO_InitStruct.Pin = Proportional_Signal_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(PrAnagSignal_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(Proportional_Signal_GPIO_Port, &GPIO_InitStruct);
 
     /* DAC interrupt Init */
     HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 0, 0);
@@ -295,7 +281,7 @@ void HAL_DAC_MspDeInit(DAC_HandleTypeDef* hdac)
     /**DAC GPIO Configuration
     PA4     ------> DAC_OUT1
     */
-    HAL_GPIO_DeInit(PrAnagSignal_GPIO_Port, PrAnagSignal_Pin);
+    HAL_GPIO_DeInit(Proportional_Signal_GPIO_Port, Proportional_Signal_Pin);
 
     /* DAC interrupt DeInit */
     /* USER CODE BEGIN DAC:TIM6_DAC_IRQn disable */
