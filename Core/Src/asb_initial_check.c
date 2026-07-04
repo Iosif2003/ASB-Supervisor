@@ -37,20 +37,22 @@ static void IC_SafetyCheck(void)
     if(SYS_GetASMS() != 1)                             { IC_Fail(); }
     if(SYS_GetSelectedMission() != MISSION_AUTONOMOUS) { IC_Fail(); }
 
-    if(ic_state >= IC_WAIT_TSMS && ic_state < IC_COMPLETE)
+    if(ic_state > IC_WAIT_TSMS && ic_state < IC_COMPLETE)
     {
-        //TSMS_Out_NOT is after AS_Relay_Out 
-        //on vehicle SDC so checking that includes AS_Relay_Out and therefore in as well
+        /* TSMS closed once → must stay closed. TSMS is after AS_Relay_Out
+           on the vehicle SDC, so this covers relay out (and in) as well. */
         if(SYS_GetTSMS() != 0)       { IC_Fail(); }
     }
-    else if(ic_state >= IC_WAIT_SDC_CLOSE_FIRST_TIME)
+    else if(ic_state == IC_WAIT_TSMS)
     {
-        //From now on we check AS_Relay_Out only inste of IN=0 -> OUT=0 as well so it is included ?????
+        /* Waiting for TSMS — the AS relay must stay closed meanwhile */
         if(SYS_GetASRelayOut() != 1) { IC_Fail(); }
     }
     else if(ic_state > IC_WAIT_RES)
     {
-        //AS_relay_in is RES1_Out so RES is Open	
+        /* AS_Relay_In is RES1_Out → RES must stay closed. NOT the relay
+           output: during the watchdog test (stop → wait open → start →
+           wait close) the output toggles by design, In stays high. */
         if(SYS_GetASRelayIn() != 1)  { IC_Fail(); }
     }
 }
@@ -75,6 +77,12 @@ void IC_Run(void)
     if (ic_state > IC_WAIT_ASMS && ic_state < IC_COMPLETE)  { IC_SafetyCheck(); }
     switch(ic_state)
     {
+
+        case IC_WAIT_MISSION:
+            /* main loop only calls IC_Run() in autonomous, but re-verify here
+               so the state machine can't start from a stale mission value */
+            if (SYS_GetSelectedMission() == MISSION_AUTONOMOUS) { ic_state = IC_WAIT_ASMS; }
+            break;
 
         case IC_WAIT_ASMS:
             if (SYS_GetASMS())  { ic_state = IC_ACTIVATE_EBS; }
@@ -193,6 +201,10 @@ void IC_Run(void)
             timeout → fail */
             if (CAN_GetASState() == 2U)    { ic_state = IC_COMPLETE; }
             else if (IC_TimerElapsed(ASB_IC_APU_READY_TIMEOUT_MS))    { IC_Fail(); }
+            break;
+
+        case IC_ENABLE_OPM:  /* TIM3 is in one-pulse mode from MX_TIM3_Init — nothing to enable */
+        case IC_COMPLETE:    /* terminal state */
             break;
         }
 }

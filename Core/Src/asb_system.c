@@ -127,8 +127,9 @@ void Manual_Run(void)
 {
     if (!manual_checked)
     {
-        /* ASMS must be off, EBS must not be activated */
-        if (SYS_GetASMS() || EBS_IsActivated())
+        /* ASMS must be off and the pneumatic system depressurized
+           (EBS unavailable) — no autonomous brake actuation possible */
+        if (SYS_GetASMS() || EBS_State() != EBS_UNAVAILABLE)
         {
             SDC_Open();
             return;
@@ -144,9 +145,10 @@ void Manual_Run(void)
         manual_checked = true;
     }
     else
-    {   
-        /* Monitoring — violation → instant SDC open */
-        if (Check(&manual_run_ok, (!SYS_GetASMS() && EBS_State() == EBS_UNAVAILABLE )) 
+    {
+        /* Monitoring — Check() true = healthy; persistent violation (2s)
+           or mission change → SDC open */
+        if (!Check(&manual_run_ok, (!SYS_GetASMS() && EBS_State() == EBS_UNAVAILABLE))
         || SYS_GetSelectedMission() != MISSION_MANUAL)
         {
             SDC_Open();
