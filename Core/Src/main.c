@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+  /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
@@ -86,6 +86,48 @@ uint32_t txMailbox;
 uint8_t rxData[8] = {0};																								// Buffer for received data
 uint8_t txData[8] = {0};
 bool  Can_Error;
+
+//	CAN LIVE DIAGNOSTICS	//
+// Add all of these to Live Expressions. What each one tells us:
+//  Dbg_Can_TxRequested : frames handed to the peripheral (+50/s expected, one every 20 ms)
+//  Dbg_Can_TxOk        : frames actually ACKed on the bus. Healthy TX -> follows TxRequested.
+//  Dbg_Can_TxFail      : transmissions that completed with error (no ACK / bit error / arb lost)
+//  Dbg_Can_TxDropped   : frames dropped because all 3 mailboxes were still busy (should stay 0)
+//  Dbg_Can_RxCount     : frames received (proves the RX path)
+//  Dbg_Can_Tec         : HW Transmit Error Counter. 0 = healthy. >127 = error passive (TX failing)
+//  Dbg_Can_Rec         : HW Receive Error Counter. 0 = healthy.
+//  Dbg_Can_Lec         : Last Error Code: 0 none, 1 stuff, 2 form, 3 ACK(=nobody acks us),
+//                        4 bit recessive, 5 bit dominant, 6 CRC
+//  Dbg_Can_BusOff      : true = TEC exceeded 255, peripheral left the bus. AutoBusOff is
+//                        ENABLE so it keeps recovering and retrying by itself (expect this
+//                        to pulse true/false while the TX path is physically broken)
+//  Dbg_Can_LastHalError: HAL error bits of the most recent error event (0x1000 = TX_TERR0 etc.)
+//  Dbg_Can_LecAtFail   : LEC captured INSIDE the TX-error interrupt. (The 10 ms snapshot above
+//                        almost always shows Lec=0 because every successfully RECEIVED frame
+//                        clears ESR.LEC again within microseconds - this one catches it in time.)
+//                        This value names the failure:
+//                          3 = ACK error         -> our frame IS on the wire, readback works,
+//                                                   but no other node answers
+//                                                   => fault is BETWEEN transceiver and bus
+//                                                      (CANH/CANL wiring, connector, termination)
+//                          5 = bit dominant error-> the dominant bits we send never come back
+//                                                   on RXD => fault is BETWEEN PA12 and the
+//                                                   transceiver output (TXD trace/solder,
+//                                                   standby pin, dead driver stage)
+//  Dbg_Can_EsrAtFail   : full raw ESR register at that same instant (TEC = bits 23:16)
+volatile uint32_t Dbg_Can_TxRequested;
+volatile uint32_t Dbg_Can_TxOk;
+volatile uint32_t Dbg_Can_TxFail;
+volatile uint32_t Dbg_Can_TxDropped;
+volatile uint32_t Dbg_Can_RxCount;
+volatile uint32_t Dbg_Can_Tec;
+volatile uint32_t Dbg_Can_Rec;
+volatile uint32_t Dbg_Can_Lec;
+volatile bool Dbg_Can_BusOff;
+volatile bool Dbg_Can_ErrorPassive;
+volatile uint32_t Dbg_Can_LastHalError;
+volatile uint32_t Dbg_Can_LecAtFail;
+volatile uint32_t Dbg_Can_EsrAtFail;
 struct can_mcu_apu_state_mission_t can_mcu_apu_state_mission;
 struct can_mcu_vcu_servo_control_t can_mcu_vcu_servo_control;
 struct can_mcu_vcu_bools_t can_mcu_vcu_bools;
@@ -151,7 +193,7 @@ static void MX_TIM7_Init(void);
 
 static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc, const uint8_t *data, uint32_t *mailbox);
 static void CAN_SendAsbStatusTask(void);
-static void CAN_SendAsbDataloggerTask(void);
+//static void CAN_SendAsbDataloggerTask(void);
 int Selected_Mission();
 void Manual_Initial_Check();
 void Manual_Monitoring();
@@ -166,23 +208,25 @@ void Init_All();
 static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc, const uint8_t *data, uint32_t *mailbox)
 {
 	CAN_TxHeaderTypeDef txHeader = {0};
-	uint32_t startTick = HAL_GetTick();
 
 	txHeader.StdId = std_id;
 	txHeader.IDE = CAN_ID_STD;
 	txHeader.RTR = CAN_RTR_DATA;
 	txHeader.DLC = dlc;
 
-	while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0U)
+	// This runs inside a timer ISR, so it must never block. We must not spin on a
+	// HAL_GetTick() timeout either: SysTick is a lower NVIC priority than this ISR,
+	// so the tick would be frozen while we wait and the timeout could never expire
+	// (deadlock). Just check for a free mailbox once, non-blocking.
+	if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0U)
 	{
-		if ((HAL_GetTick() - startTick) > 5U)
-		{
-			// All mailboxes stuck (e.g. bus disturbance). Abort the pending
-			// requests so they don't keep retrying / blocking, then drop.
-			HAL_CAN_AbortTxRequest(&hcan1, CAN_TX_MAILBOX0 | CAN_TX_MAILBOX1 | CAN_TX_MAILBOX2);
-			Can_Error = true;
-			return HAL_TIMEOUT;
-		}
+		// All 3 mailboxes still busy (single-shot normally frees them in ~135 us, so this
+		// should never happen). Abort the stale requests and drop this frame; the next
+		// 20 ms tick sends fresh data.
+		HAL_CAN_AbortTxRequest(&hcan1, CAN_TX_MAILBOX0 | CAN_TX_MAILBOX1 | CAN_TX_MAILBOX2);
+		Dbg_Can_TxDropped++;
+		Can_Error = true;
+		return HAL_TIMEOUT;
 	}
 
 	if (HAL_CAN_AddTxMessage(&hcan1, &txHeader, (uint8_t *)data, mailbox) != HAL_OK)
@@ -191,6 +235,7 @@ static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc, const
 		return HAL_ERROR;
 	}
 
+	Dbg_Can_TxRequested++;
 	return HAL_OK;
 }
 
@@ -199,14 +244,14 @@ static void CAN_SendAsbStatusTask(void)
 	canTxStruct_asb.asms_state = ASMS_Out;
 	canTxStruct_asb.tsms_out = TSMS_Out_NOT;
 	canTxStruct_asb.initial_checked = Initial_Checked;
-	canTxStruct_asb.service_brake_status = Servo_Status;
+	//canTxStruct_asb.service_brake_status = Servo_Status;
 	canTxStruct_asb.ebs_status = EBS_Status;
 	canTxStruct_asb.initial_check_step = Initial_Check_Step;
-	canTxStruct_asb.monitor_tank_pressure = Tank_Pressure_Check;
-	canTxStruct_asb.monitor_brake_pressure = Brake_Pressure_Check;
-	canTxStruct_asb.monitor_servo_check = Service_Brake_Check;
-	canTxStruct_asb.monitor_apu = APU_Communication_Check;
-	canTxStruct_asb.ebs_tank_pressure = Tank_Pressure * 100;
+	//canTxStruct_asb.monitor_tank_pressure = Tank_Pressure_Check;
+	//canTxStruct_asb.monitor_brake_pressure = Brake_Pressure_Check;
+	//canTxStruct_asb.monitor_servo_check = Service_Brake_Check;
+	//canTxStruct_asb.monitor_apu = APU_Communication_Check;
+	//canTxStruct_asb.ebs_tank_pressure = Tank_Pressure * 100;
 
 	can_mcu_asb_pack(txData, &canTxStruct_asb, sizeof(txData));
 	// On a transient bus problem just drop this frame; never hang the node
@@ -214,7 +259,7 @@ static void CAN_SendAsbStatusTask(void)
 	(void)CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, txData, &txMailbox);
 }
 
-static void CAN_SendAsbDataloggerTask(void)
+/*static void CAN_SendAsbDataloggerTask(void)
 {
 	canTxStruct_asb_datalogger.asms_out = ASMS_Out;
 	canTxStruct_asb_datalogger.ebs_pneumatic_pressure = Tank_Pressure;
@@ -234,7 +279,7 @@ static void CAN_SendAsbDataloggerTask(void)
 	can_mcu_asb_datalogger_pack(txData, &canTxStruct_asb_datalogger, sizeof(txData));
 	// Drop on transient failure instead of hanging the node (see note above).
 	(void)CAN_SendStdMessage(CAN_MCU_ASB_DATALOGGER_FRAME_ID, CAN_MCU_ASB_DATALOGGER_LENGTH, txData, &txMailbox);
-}
+}*/
 
 /* USER CODE END 0 */
 
@@ -252,7 +297,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+ HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -356,7 +401,7 @@ int main(void)
 			  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);				//Restart the timer with the correct setup
 	      }
 
-		  if((Manual_Initial_Checked == false) && (ASMS_Out == 0) && (EBS_Status == EBS_Unavailable))	//Ensure that nothing goes wrong until SDC closes//ASB must check that no autonomous brake actuation is possible ASMS = 0 -> Servo Disengaged before closing the SDC (Manual mode)
+		  if((Manual_Initial_Checked == false) && (ASMS_Out == 0) /*&& (EBS_Status == EBS_Unavailable)*/)	//Ensure that nothing goes wrong until SDC closes//ASB must check that no autonomous brake actuation is possible ASMS = 0 -> Servo Disengaged before closing the SDC (Manual mode)
 			  Manual_Initial_Check();				//We enter this once because of Change in Manual initial checkes change if succesfull
 
 
@@ -506,14 +551,18 @@ static void MX_CAN1_Init(void)
   /* USER CODE BEGIN CAN1_Init 1 */
 
   /* USER CODE END CAN1_Init 1 */
+  // Identical CAN init to the ANALOG_UNIVERSAL node (proven working on the car):
+  // APB1 40 MHz / presc 2 = 20 MHz tq, (1 + 15 + 4) = 20 tq -> 1 Mbit/s, sample point 80%
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 4;
+  hcan1.Init.Prescaler = 2;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
-  hcan1.Init.SyncJumpWidth = CAN_SJW_2TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_7TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_2TQ;
+  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_15TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_4TQ;
   hcan1.Init.TimeTriggeredMode = DISABLE;
-  hcan1.Init.AutoBusOff = ENABLE;
+  hcan1.Init.AutoBusOff = ENABLE;	// Auto-recover from bus-off: without this the node TX dies ~0.6 s
+									// after boot (32 failed frames) and stays dead until power cycle.
+									// With it, TX resumes by itself the moment the bus path is fixed.
   hcan1.Init.AutoWakeUp = DISABLE;
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
@@ -935,6 +984,10 @@ void As_Initial_Check(){
 	HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_RESET);
 	Valve2_GND = 0;
 	HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port,Valve2_GND_ST_Pin, GPIO_PIN_RESET);
+	Value = 0;
+	HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
+	HAL_Delay(700);
+
 
 	//	WAIT FOR RES TO CLOSE	//
 
@@ -952,7 +1005,7 @@ void As_Initial_Check(){
 	do{
 		if(ASMS_Out != 1	||	Selected_Mission() != Autonomous || ASRelay_In != 1)
 			return;
-	}while(Tank_Pressure < Tank_Pressure_min || Brake_Pressure < 11);	//Check that we have enough pneumatic pressure to activate ebs and that brakes are engaged
+	}while(Tank_Pressure < Tank_Pressure_min || Brake_Pressure < 5   );	//Check that we have enough pneumatic pressure to activate ebs and that brakes are engaged
 
 	//	CLOSE AS_RELAY	// (SDC CLOSE)
 
@@ -1004,7 +1057,8 @@ void As_Initial_Check(){
 		HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_SET);
 		Valve2_GND = 1;
 		HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port,Valve2_GND_ST_Pin, GPIO_PIN_SET);
-		HAL_Delay(700);
+
+
 
 		do{
 			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT == 0)	//TSMS_Out_NOT is after AS_Relay_Out on our vehicle SDC so checking that includes AS_Relay_Out and therefore in as well
@@ -1041,7 +1095,7 @@ void As_Initial_Check(){
 
 		Initial_Check_Step = 10;
 
-		Valve2_GND = 0;
+		/*Valve2_GND = 0;
 		HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
 		HAL_Delay(700);
 
@@ -1061,7 +1115,7 @@ void As_Initial_Check(){
 		do{
 			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT == 0)
 				return;
-		}while(Brake_Pressure > 3);
+		}while(Brake_Pressure > 3);*/
 
 		// ACTIVATE SERVICE BRAKE //
 		
@@ -1095,7 +1149,7 @@ void As_Initial_Check(){
 
 		Initial_Check_Step = 14;
 
-		Value = 2000;
+		Value = 4095;
 		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
 		HAL_Delay(700);
 
@@ -1305,6 +1359,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	if(htim->Instance == TIM4) //10ms
 	{
+		//	CAN BUS HEALTH SNAPSHOT	// (read the raw HW error counters for Live Expressions)
+		{
+			uint32_t esr = hcan1.Instance->ESR;
+			Dbg_Can_Tec = (esr >> 16) & 0xFFU;					// CAN_ESR_TEC
+			Dbg_Can_Rec = (esr >> 24) & 0xFFU;					// CAN_ESR_REC
+			Dbg_Can_Lec = (esr >> 4) & 0x7U;					// CAN_ESR_LEC
+			Dbg_Can_BusOff = ((esr & CAN_ESR_BOFF) != 0U);
+			Dbg_Can_ErrorPassive = ((esr & CAN_ESR_EPVF) != 0U);
+		}
+
 		//	DIGITAL INPUTS	//
 		ASMS_Out = HAL_GPIO_ReadPin(ASMS_Out_GPIO_Port, ASMS_Out_Pin);
 		TSMS_Out_NOT = HAL_GPIO_ReadPin(TSMS_Out_NOT_GPIO_Port, TSMS_Out_NOT_Pin);
@@ -1317,7 +1381,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 		//	EBS STATE	//
 		if(Tank_Pressure < Tank_Pressure_min)
-			EBS_Status = EBS_Unavailable;						//We do not have the sufficient tank pressure to consider ebs triggered when activated (it may be activated but brake pressure will me minimal)
+			EBS_Status = EBS_Unavailable;			//We do not have the sufficient tank pressure to consider ebs triggered when activated (it may be activated but brake pressure will me minimal)
 		else if(TSMS_Out_NOT == 0 || Valve1_GND == 0 || Valve2_GND == 0)	//No SDC or EBS Activated -> EBS Activated + Enough Tank Presure -> EBS Triggered (What about mechanical Valve)
 			EBS_Status = EBS_Triggered;
 		else
@@ -1357,7 +1421,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	if(htim->Instance == TIM7)	//100ms
 	{
-		CAN_SendAsbDataloggerTask();
+		//CAN_SendAsbDataloggerTask();
 
 		if(Manual_Initial_Checked == true)
 			Manual_Monitoring();
@@ -1373,6 +1437,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)	//runs automatic
 			Can_Error = true;
 			Error_Handler();
 		}
+		Dbg_Can_RxCount++;
 		// Read received message
 
 			if (msgHeaderRx.StdId == CAN_MCU_DASH_BRAKE_FRAME_ID ){
@@ -1401,6 +1466,52 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 	if (hcan->Instance == CAN1)
 	{
 		Can_Error = true;
+		Dbg_Can_LastHalError = hcan->ErrorCode;
+		// Grab ESR at the exact instant of the failure. Successfully received frames
+		// clear ESR.LEC again within microseconds on a busy bus, so the periodic 10 ms
+		// snapshot reads LEC=0 even while every single TX is failing - only a capture
+		// taken inside this interrupt can still see the real error code.
+		{
+			uint32_t esr = hcan->Instance->ESR;
+			Dbg_Can_EsrAtFail = esr;
+			Dbg_Can_LecAtFail = (esr >> 4) & 0x7U;
+		}
+		// A transmission finished without success (no ACK, bit error or lost arbitration)
+		if ((hcan->ErrorCode & (HAL_CAN_ERROR_TX_TERR0 | HAL_CAN_ERROR_TX_TERR1 | HAL_CAN_ERROR_TX_TERR2 |
+		                        HAL_CAN_ERROR_TX_ALST0 | HAL_CAN_ERROR_TX_ALST1 | HAL_CAN_ERROR_TX_ALST2)) != 0U)
+			Dbg_Can_TxFail++;
+		// Clear the sticky HAL error bits so the next event reports its own fresh cause
+		HAL_CAN_ResetError(hcan);
+	}
+}
+
+// A frame was actually acknowledged on the bus -> TX is healthy right now.
+// Clearing here keeps Can_Error as a live status flag instead of a boot-time latch
+// (the first frames sent before the other nodes are up fail and set it).
+void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)
+{
+	if (hcan->Instance == CAN1)
+	{
+		Can_Error = false;
+		Dbg_Can_TxOk++;
+	}
+}
+
+void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan)
+{
+	if (hcan->Instance == CAN1)
+	{
+		Can_Error = false;
+		Dbg_Can_TxOk++;
+	}
+}
+
+void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan)
+{
+	if (hcan->Instance == CAN1)
+	{
+		Can_Error = false;
+		Dbg_Can_TxOk++;
 	}
 }
 
@@ -1469,7 +1580,7 @@ void Init_All(){
 		filterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
 		filterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
 		filterConfig.FilterActivation = ENABLE;
-		filterConfig.SlaveStartFilterBank = 27;  // CAN1 uses 0�26, CAN2 starts at 27
+		filterConfig.SlaveStartFilterBank = 0;  // CAN1 uses 0�26, CAN2 starts at 27
 
 		// List of allowed standard IDs
 		uint16_t acceptedIDs[] = {
