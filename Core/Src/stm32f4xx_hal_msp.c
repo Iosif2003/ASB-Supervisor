@@ -424,7 +424,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     PC9     ------> TIM3_CH4
     */
     GPIO_InitStruct.Pin = WatchdogPWM_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;   /* open drain — external pull-up on board */
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
