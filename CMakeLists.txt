@@ -20,13 +20,17 @@ endif()
 set(CMAKE_C_COMPILER   ${_TC_PATH}${TOOLCHAIN_PREFIX}gcc)
 set(CMAKE_CXX_COMPILER ${_TC_PATH}${TOOLCHAIN_PREFIX}g++)
 set(CMAKE_ASM_COMPILER ${_TC_PATH}${TOOLCHAIN_PREFIX}gcc)
-set(CMAKE_OBJCOPY      ${_TC_PATH}${TOOLCHAIN_PREFIX}objcopy)
-set(CMAKE_SIZE         ${_TC_PATH}${TOOLCHAIN_PREFIX}size)
 
 # Prevent CMake from testing the compiler with a full executable link
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 project(ASB_Supervisor C CXX ASM)
+
+# Locate binutils next to the resolved compiler so post-build steps work
+# even when the toolchain bin dir is not on PATH (Windows)
+get_filename_component(_TC_BIN_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+find_program(CMAKE_OBJCOPY NAMES ${TOOLCHAIN_PREFIX}objcopy HINTS "${_TC_BIN_DIR}" REQUIRED)
+find_program(CMAKE_SIZE    NAMES ${TOOLCHAIN_PREFIX}size    HINTS "${_TC_BIN_DIR}" REQUIRED)
 
 set(CMAKE_C_STANDARD   11)
 set(CMAKE_CXX_STANDARD 17)

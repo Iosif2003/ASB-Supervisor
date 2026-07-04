@@ -10,6 +10,7 @@
 #include "asb_service_brake.h"
 #include "asb_ebs.h"
 #include "asb_sensors.h"
+#include "asb_monitoring.h"
 #include <string.h>
 
 /* External handles from main.c */
@@ -18,7 +19,6 @@ extern CAN_HandleTypeDef hcan1;
 /* ── Private RX/TX structs ── */
 static struct can_mcu_apu_state_mission_t can_apu_state;
 static struct can_mcu_vcu_bools_t         can_vcu_bools;
-static struct can_mcu_vcu_servo_control_t can_vcu_servo;
 static struct can_mcu_dash_brake_t        can_dash_brake;
 static struct can_mcu_asb_t               can_tx_asb;
 
@@ -83,10 +83,14 @@ void CAN_App_Init(void)
         Error_Handler();
     }
 
+    /* Enable RX interrupt — without this HAL_CAN_RxFifo0MsgPendingCallback never fires */
+    if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+        Error_Handler();
+    }
+
     /* Default RX state */
     memset(&can_apu_state, 0, sizeof(can_apu_state));
     memset(&can_vcu_bools, 0, sizeof(can_vcu_bools));
-    memset(&can_vcu_servo, 0, sizeof(can_vcu_servo));
     memset(&can_dash_brake, 0, sizeof(can_dash_brake));
     memset(&can_tx_asb, 0, sizeof(can_tx_asb));
     memset(rx_data, 0, sizeof(rx_data));
@@ -109,6 +113,9 @@ static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc,
     {
         if ((HAL_GetTick() - start) > 5U)
         {
+            /* Bus dead / no ACK: flush all mailboxes so they don't wedge forever */
+            HAL_CAN_AbortTxRequest(&hcan1,
+                CAN_TX_MAILBOX0 | CAN_TX_MAILBOX1 | CAN_TX_MAILBOX2);
             return HAL_TIMEOUT;
         }
     }
@@ -133,9 +140,14 @@ void CAN_SendAsbStatus(void)
     can_tx_asb.ebs_tank_pressure      = (uint16_t)(Sensors_GetTankPressure1() * 100.0f);
     if(IC_GetState()>= IC_NOTIFY_APU) { can_tx_asb.initial_checked = true; }
     else { can_tx_asb.initial_checked = false; }    
-    // This ensures that initial checked is only true when the state is IC_NOTIFY_APU or higher, 
-    // which means that the initial check process has been completed and the APU has been notified. 
+    // This ensures that initial checked is only true when the state is IC_NOTIFY_APU or higher,
+    // which means that the initial check process has been completed and the APU has been notified.
     // Before that, it is false to indicate that the initial check is not yet complete.
+
+    can_tx_asb.monitor_tank_pressure  = Monitor_TankOk();
+    can_tx_asb.monitor_brake_pressure = Monitor_BrakeOk();
+    can_tx_asb.monitor_servo_check    = Monitor_ServiceBrakeOk();
+    can_tx_asb.monitor_apu            = Monitor_ApuOk();
 
     can_mcu_asb_pack(tx_data, &can_tx_asb, sizeof(tx_data));
     CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, tx_data);
@@ -165,10 +177,6 @@ void CAN_ProcessRxMessage(void)
             
             /*Monitor if APU is alive*/
             apu_last_rx_tick = HAL_GetTick();
-            break;
-
-        case CAN_MCU_VCU_SERVO_CONTROL_FRAME_ID:
-            can_mcu_vcu_servo_control_unpack(&can_vcu_servo, rx_data, msg_header_rx.DLC);
             break;
 
         case CAN_MCU_VCU_BOOLS_FRAME_ID:
@@ -202,11 +210,6 @@ bool CAN_GetASSetFinished(void)
 uint8_t CAN_GetVCUMode(void)
 {
     return can_vcu_bools.mode;
-}
-
-int CAN_GetServoCommand(void)
-{
-    return can_vcu_servo.servo_control;
 }
 
 /* ── RX Getters — DASH ── */

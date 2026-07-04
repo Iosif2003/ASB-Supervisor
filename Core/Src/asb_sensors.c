@@ -5,6 +5,7 @@
 
 #include "asb_sensors.h"
 #include "asb_config.h"
+#include "asb_can.h"
 #include "main.h"
 #include <stdint.h>
 #include <stdbool.h>
@@ -14,7 +15,7 @@ extern uint16_t adc_buffer[ADC_BUFFER_SIZE];
 /* Private Variables */
 static float tank_pressure1 = 0.0f;
 static float tank_pressure2 = 0.0f;
-static float brake_pressure = 0.0f;
+static float brake_pressure = 0.0f;   /* front brake pressure from CAN — watchable in Live Expressions */
 
 /* States */
 float Sensors_GetTankPressure1(void)  { return tank_pressure1;  }
@@ -37,6 +38,9 @@ void Sensors_Update(uint16_t *adc_buf)
 
     float voltage2 = ((float)adc_buf[1] / 4095.0f) * 3.3f;
     tank_pressure2 = (2.5f * (voltage2 * 1.5f)) - 2.5f;
+
+    /* For now brake pressure comes from CAN (DASH_BRAKE front) — no analog sensor yet */
+    brake_pressure = CAN_GetBrakePressureFront();
 }
 
 /* Pressure Checks */
