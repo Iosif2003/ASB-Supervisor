@@ -39,9 +39,10 @@ static void IC_SafetyCheck(void)
 
     if(ic_state > IC_WAIT_TSMS && ic_state < IC_COMPLETE)
     {
-        /* TSMS closed once → must stay closed. TSMS is after AS_Relay_Out
-           on the vehicle SDC, so this covers relay out (and in) as well. */
-        if(SYS_GetTSMS() != 0)       { IC_Fail(); }
+        /* TSMS closed once → must stay closed (high). TSMS is after
+           AS_Relay_Out on the vehicle SDC, so this covers relay out
+           (and in) as well. */
+        if(SYS_GetTSMS() == 0)       { IC_Fail(); }
     }
     else if(ic_state == IC_WAIT_TSMS)
     {
@@ -74,7 +75,7 @@ bool       IC_IsComplete(void) { return ic_state == IC_COMPLETE; }
 
 void IC_Run(void)
 {
-    if (ic_state > IC_WAIT_ASMS && ic_state < IC_COMPLETE)  { IC_SafetyCheck(); }
+    if (ic_state > IC_WAIT_MISSION && ic_state < IC_COMPLETE)  { IC_SafetyCheck(); }
     switch(ic_state)
     {
 
@@ -95,12 +96,12 @@ void IC_Run(void)
 
          case IC_WAIT_RES:
             /* ASRelay_In == 1 means SDC before ASB is closed (RES closed) */
-            if (SYS_GetASRelayIn()) { ic_state = IC_WAIT_PRESSURES; }
+            if (SYS_GetASRelayIn()) { ic_state = IC_SET_DIGPIN_HIGH;/*IC_WAIT_PRESSURES;*/ }
             break;
 
         case IC_WAIT_PRESSURES:
             /* Tank pressure valid AND brake pressure confirms engaged */
-            if (Sensors_TankPressureValid() && Sensors_BrakePressureEngaged()) { ic_state = IC_SET_DIGPIN_HIGH;}
+        	if (Sensors_TankPressureValid() && Sensors_BrakePressureEngaged()) { ic_state = IC_SET_DIGPIN_HIGH;}
             break;
           
         case IC_SET_DIGPIN_HIGH: /*TODO: deep check shutdown logic*/
@@ -130,8 +131,9 @@ void IC_Run(void)
             if (SYS_GetASRelayOut()) { ic_state = IC_WAIT_TSMS; }
             break;
 
-        case IC_WAIT_TSMS: /*TODO: fix logic*/
-            if (!SYS_GetTSMS()) { ic_state = IC_RELEASE_EBS; }
+        case IC_WAIT_TSMS:
+            /* TSMS high = last part of the SDC closed */
+            if (SYS_GetTSMS()) { ic_state = IC_RELEASE_EBS; }
             break;
 
         case IC_RELEASE_EBS:

@@ -133,7 +133,7 @@ static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc,
 void CAN_SendAsbStatus(void)
 {
     can_tx_asb.asms_state             = SYS_GetASMS();
-    can_tx_asb.tsms_out               = !SYS_GetTSMS();
+    can_tx_asb.tsms_out               = SYS_GetTSMS();   /* raw: 1 = closed, same as main */
     can_tx_asb.service_brake_status   = ServiceBrake_State();
     can_tx_asb.ebs_status             = EBS_State(); 
     can_tx_asb.initial_check_step     = (uint8_t)IC_GetState();

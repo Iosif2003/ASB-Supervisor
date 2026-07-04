@@ -81,7 +81,7 @@ static struct {
 void Inputs_Sample(void)
 {
     sys_in.asms               = HAL_GPIO_ReadPin(ASMS_GPIO_Port, ASMS_Pin);
-    sys_in.tsms               = !HAL_GPIO_ReadPin(TSMS_GPIO_Port, TSMS_Pin);  /* pin reads true TSMS (new HW); invert so GetTSMS()==0 means SDC closed, matching old TSMS_Out_NOT convention */
+    sys_in.tsms               = HAL_GPIO_ReadPin(TSMS_GPIO_Port, TSMS_Pin);  /* raw pin: 1 = TSMS closed (SDC live), 0 = open */
     sys_in.AS_Relay_In        = HAL_GPIO_ReadPin(AS_Relay_In_GPIO_Port, AS_Relay_In_Pin);
     sys_in.AS_Relay_Out       = HAL_GPIO_ReadPin(AS_Relay_Out_GPIO_Port, AS_Relay_Out_Pin);
     sys_in.interlock1         = HAL_GPIO_ReadPin(Interlock_Valve1_GPIO_Port, Interlock_Valve1_Pin);
@@ -138,8 +138,8 @@ void Manual_Run(void)
         /* Command SDC close */
         SDC_Close();
 
-        /* Verify SDC is closed */
-        if (SYS_GetTSMS())
+        /* Verify SDC is closed (TSMS high = closed) */
+        if (!SYS_GetTSMS())
             return;
 
         manual_checked = true;
