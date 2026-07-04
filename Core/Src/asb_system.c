@@ -59,12 +59,35 @@ void WDG_Reset(void)
 void WDG_Stop(void)
 {
     HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);
+
+    /* With the channel off the open-drain pin is released and the external
+       pull-up holds the line steadily HIGH — the watchdog circuit can read
+       that as "alive" and never drop the AS relay. Take the pin over as a
+       plain GPIO and drive it LOW so the line is unambiguously dead. */
+    GPIO_InitTypeDef gpio = {0};
+    gpio.Pin   = WatchdogPWM_Pin;
+    gpio.Mode  = GPIO_MODE_OUTPUT_OD;
+    gpio.Pull  = GPIO_NOPULL;
+    gpio.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(WatchdogPWM_GPIO_Port, &gpio);
+    HAL_GPIO_WritePin(WatchdogPWM_GPIO_Port, WatchdogPWM_Pin, GPIO_PIN_RESET);
+
     wdg_is_running = false;
 }
 
 /* Watchdog Start */
 void WDG_Start(void)
 {
+    /* Hand the pin back to TIM3 CH4 */
+    GPIO_InitTypeDef gpio = {0};
+    gpio.Pin       = WatchdogPWM_Pin;
+    gpio.Mode      = GPIO_MODE_AF_OD;
+    gpio.Pull      = GPIO_NOPULL;
+    gpio.Speed     = GPIO_SPEED_FREQ_LOW;
+    gpio.Alternate = GPIO_AF2_TIM3;
+    HAL_GPIO_Init(WatchdogPWM_GPIO_Port, &gpio);
+
+    __HAL_TIM_SET_COUNTER(&htim3, 0);
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
     wdg_is_running = true;
 }
