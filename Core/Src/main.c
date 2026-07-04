@@ -233,7 +233,8 @@ int main(void)
        Manual_Run();
       }
 
-      WDG_Reset();  
+
+      if (IC_GetState() != IC_WAIT_SDC_OPEN_SECOND_TIME) {WDG_Reset();}
     }     
     
     if (tick_20ms)  { tick_20ms  = false; CAN_SendAsbStatus(); }
