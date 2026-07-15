@@ -176,7 +176,7 @@ int main(void)
       {
         switch (CAN_GetASState())
           {
-            case 1U:  /* AS_Off */
+            case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_OFF_CHOICE:  /* AS_Off */
             if (IC_GetState() < IC_SET_DIGPIN_HIGH) { SDC_Open(); } 
             // Ensure SDC is open if initial check hasn't progressed past 
             // the point of setting the digital pin high
@@ -185,7 +185,7 @@ int main(void)
 
             break;
 
-            case 2U:  /* AS_Ready */
+            case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_READY_CHOICE:  /* AS_Ready */
             if ( ServiceBrake_State() != SERVICE_BRAKE_PARK) { ServiceBrake_Park(); } 
             // Set service brake to park position as a safety measure 
             // in case something goes wrong and the vehicle starts moving 
@@ -195,7 +195,7 @@ int main(void)
 
             break;
 
-            case 3U:  /* AS_Driving */
+            case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_DRIVING_CHOICE:  /* AS_Driving */
             if (ServiceBrake_State() != SERVICE_BRAKE_AVAILABLE) 
             { 
               ServiceBrake_Disengage();
@@ -214,7 +214,7 @@ int main(void)
             
             break;
 
-            case 4U:  /* AS_Emergency */
+            case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_EMERGENCY_CHOICE:  /* AS_Emergency */
             EBS_Activate();
             SDC_Open();
             monitoring = false;
