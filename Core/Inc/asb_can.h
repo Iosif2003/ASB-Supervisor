@@ -30,8 +30,20 @@ int     CAN_GetServoCommand(void);
 float CAN_GetBrakePressureFront(void);
 float CAN_GetBrakePressureRear(void);
 
+/* RX Getters — RES */
+uint8_t CAN_GetRESStop(void);            /* raw bit: 0 = emergency active, 1 = OK */
+uint8_t CAN_GetRESToggle(void);          /* K2 latching switch (Go-signal) */
+uint8_t CAN_GetRESButton(void);          /* K3 button (Go-signal) */
+uint8_t CAN_GetRESSignalStrength(void);  /* radio quality 0-100 % */
+bool    CAN_GetRESEmergency(void);       /* true = RES E-Stop asserted */
+
+/* RX Getters — RES Init (NMT sent by APU, monitored by ASB) */
+uint8_t CAN_GetRESInitRequestedState(void);
+uint8_t CAN_GetRESInitAddressedNode(void);
+
 /* Communication Alive Checks */
 bool CAN_IsAPUAlive(void);
 bool CAN_IsBrakePressureAlive(void);
+bool CAN_IsRESAlive(void);
 
 #endif /* ASB_CAN_H */

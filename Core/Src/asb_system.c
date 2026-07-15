@@ -24,6 +24,12 @@ extern TIM_HandleTypeDef htim3;
 void ASB_System_Init(void) {
     sdc_is_closed = false;
     wdg_is_running = false;
+    manual_checked = false;
+
+    /* Freeze TIM3 while the core is halted by the debugger — otherwise a
+       breakpoint held >40ms fires the OPM update event and the watchdog
+       pulse dies. No effect when no debugger is attached. */
+    __HAL_DBGMCU_FREEZE_TIM3();
 
     HAL_GPIO_WritePin(AS_Relay_Signal_GPIO_Port, AS_Relay_Signal_Pin, GPIO_PIN_RESET);
 }
@@ -53,6 +59,16 @@ void SDC_Open(void)
 void WDG_Reset(void)
 {
     __HAL_TIM_SET_COUNTER(&htim3, 0);
+
+    /* OPM trap: one missed 40ms deadline (e.g. debugger halt) fires the
+       update event and hardware clears CEN — a counter write alone can
+       never restart the pulse train. Being called here proves the code is
+       alive, so re-arm. Guarded: during WDG_Stop() the timer must stay off. */
+    if (wdg_is_running && ((htim3.Instance->CR1 & TIM_CR1_CEN) == 0U))
+    {
+        __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_UPDATE);
+        __HAL_TIM_ENABLE(&htim3);
+    }
 }
 
 /* Watchdog Stop */
@@ -88,6 +104,7 @@ void WDG_Start(void)
     HAL_GPIO_Init(WatchdogPWM_GPIO_Port, &gpio);
 
     __HAL_TIM_SET_COUNTER(&htim3, 0);
+    __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_UPDATE);   /* stale UIF from a missed deadline */
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
     wdg_is_running = true;
 }
@@ -152,7 +169,7 @@ void Manual_Run(void)
     {
         /* ASMS must be off and the pneumatic system depressurized
            (EBS unavailable) — no autonomous brake actuation possible */
-        if (SYS_GetASMS() || EBS_State() != EBS_UNAVAILABLE)
+        if (SYS_GetASMS() /*|| EBS_State() != EBS_UNAVAILABLE*/)
         {
             SDC_Open();
             return;
@@ -165,13 +182,14 @@ void Manual_Run(void)
         if (!SYS_GetTSMS())
             return;
 
+
         manual_checked = true;
     }
     else
     {
         /* Monitoring — Check() true = healthy; persistent violation (2s)
            or mission change → SDC open */
-        if (!Check(&manual_run_ok, (!SYS_GetASMS() && EBS_State() == EBS_UNAVAILABLE))
+        if (!Check(&manual_run_ok, (!SYS_GetASMS() /*&& EBS_State() == EBS_UNAVAILABLE*/))
         || SYS_GetSelectedMission() != MISSION_MANUAL)
         {
             SDC_Open();

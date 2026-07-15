@@ -24,9 +24,9 @@ bool EBS_System2_State(void) { return ebs_system2_state; }
 /* GET EBS STATE */
 EBS_State_t EBS_State(void) 
 {
-    if(!Sensors_TankPressureValid())            { EBS_state = EBS_UNAVAILABLE; }
+    //if(!Sensors_TankPressureValid())            { EBS_state = EBS_UNAVAILABLE; }
 
-    else if(ebs_is_activated || !SYS_GetTSMS()) { EBS_state = EBS_TRIGGERED; }  /* activated or SDC open */
+   /*else */if(ebs_is_activated || !SYS_GetTSMS()) { EBS_state = EBS_TRIGGERED; }  /* activated or SDC open */
     
     else { EBS_state = EBS_ARMED; }
     

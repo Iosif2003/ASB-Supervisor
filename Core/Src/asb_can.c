@@ -13,6 +13,8 @@
 #include "asb_monitoring.h"
 #include <string.h>
 
+
+
 /* External handles from main.c */
 extern CAN_HandleTypeDef hcan1;
 
@@ -21,6 +23,8 @@ static struct can_mcu_apu_state_mission_t can_apu_state;
 static struct can_mcu_vcu_bools_t         can_vcu_bools;
 static struct can_mcu_dash_brake_t        can_dash_brake;
 static struct can_mcu_asb_t               can_tx_asb;
+static struct can_mcu_res_status_t 		can_res;
+//static struct can_mcu_apu_res_init_t    can_res_init;
 
 /* ── Private CAN buffers ── */
 static CAN_RxHeaderTypeDef msg_header_rx;
@@ -35,6 +39,7 @@ static float brake_pressure_rear  = 0.0f;
 /* ── APU alive tracking ── */
 static uint32_t apu_last_rx_tick = 0U;
 static uint32_t brake_last_rx_tick = 0U;
+//static uint32_t res_last_rx_tick = 0U;
 
 
 /* ── Initialization ── */
@@ -42,6 +47,7 @@ void CAN_App_Init(void)
 {
     apu_last_rx_tick   = HAL_GetTick();
     brake_last_rx_tick = HAL_GetTick();
+    //res_last_rx_tick   = HAL_GetTick();
 
     CAN_FilterTypeDef fc;
 
@@ -56,6 +62,8 @@ void CAN_App_Init(void)
         0x065,   /* DASH_BRAKE         */
         0x320,   /* VCU_BOOLS          */
         0x324,   /* VCU_SERVO_CONTROL  */
+        0x191,   /* RES_STATUS         */
+        //0x000,   /* APU_RES_INIT (NMT) */
     };
     const int count = sizeof(ids) / sizeof(ids[0]);
     int bank = 0;
@@ -93,6 +101,8 @@ void CAN_App_Init(void)
     memset(&can_vcu_bools, 0, sizeof(can_vcu_bools));
     memset(&can_dash_brake, 0, sizeof(can_dash_brake));
     memset(&can_tx_asb, 0, sizeof(can_tx_asb));
+    //memset(&can_res, 0, sizeof(can_res));
+    //memset(&can_res_init, 0 ,sizeof(can_res_init));
     memset(rx_data, 0, sizeof(rx_data));
     memset(tx_data, 0, sizeof(tx_data));
 }
@@ -183,6 +193,17 @@ void CAN_ProcessRxMessage(void)
             can_mcu_vcu_bools_unpack(&can_vcu_bools, rx_data, msg_header_rx.DLC);
             break;
 
+       case CAN_MCU_RES_STATUS_FRAME_ID:
+            can_mcu_res_status_unpack(&can_res, rx_data, msg_header_rx.DLC);
+
+            /* Monitor if RES is alive */
+           // res_last_rx_tick = HAL_GetTick();
+            break;
+
+       // case CAN_MCU_APU_RES_INIT_FRAME_ID:
+           // can_mcu_apu_res_init_unpack(&can_res_init, rx_data, msg_header_rx.DLC);
+          //  break;
+
         default:
             break;
     }
@@ -224,12 +245,58 @@ float CAN_GetBrakePressureRear(void)
     return brake_pressure_rear;
 }
 
+/* ── RX Getters — RES ── */
+
+/*uint8_t CAN_GetRESStop(void)
+{
+    return can_res.stop;
+}
+
+uint8_t CAN_GetRESToggle(void)
+{
+    return can_res.toggle;
+}
+
+uint8_t CAN_GetRESButton(void)
+{
+    return can_res.button;
+}
+
+uint8_t CAN_GetRESSignalStrength(void)
+{
+    return can_res.signal_strength;
+}
+
+bool CAN_GetRESEmergency(void)
+{
+    return (can_res.stop == CAN_MCU_RES_STATUS_STOP_ON_CHOICE);
+}*/
+
+/* ── RX Getters — RES Init (NMT from APU) ── */
+
+/*uint8_t CAN_GetRESInitRequestedState(void)
+{
+    return can_res_init.requested_state;
+}
+
+uint8_t CAN_GetRESInitAddressedNode(void)
+{
+    return can_res_init.addresed_node;
+}*/
+
 /* ── APU Alive ── */
 
 bool CAN_IsAPUAlive(void)
 {
     return (HAL_GetTick() - apu_last_rx_tick < 480U);
 }
+
+/* ── RES Alive ── */
+
+/*bool CAN_IsRESAlive(void)
+{
+    return (HAL_GetTick() - res_last_rx_tick < 100U);
+}*/
 
 /* ── Brake Pressure Alive ── */
 

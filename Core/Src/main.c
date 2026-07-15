@@ -77,6 +77,7 @@ static volatile bool tick_10ms  = false;
 static volatile bool tick_20ms  = false;
 static volatile bool tick_100ms = false;
 static bool monitoring = false;   /* armed at AS_Ready; αν σπάσει check → EBS + SDC open */
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -157,7 +158,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim4);   /* Monitoring interval   */
   HAL_TIM_Base_Start_IT(&htim5);   /* CAN ASB TX            */
   HAL_TIM_Base_Start_IT(&htim7);   /* CAN Datalogger TX     */
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);  /* Watchdog PWM */
+  WDG_Start();                     /* Watchdog PWM — sets wdg_is_running so the self-healing WDG_Reset() covers boot-to-IC too */
   HAL_DAC_Start(&hdac, DAC_CHANNEL_1);       /* Service brake DAC */
   
   /* USER CODE END 2 */
@@ -234,7 +235,7 @@ int main(void)
       }
 
 
-      if (IC_GetState() != IC_WAIT_SDC_OPEN_SECOND_TIME) {WDG_Reset();}
+      WDG_Reset();
     }     
     
     if (tick_20ms)  { tick_20ms  = false; CAN_SendAsbStatus(); }

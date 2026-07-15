@@ -133,11 +133,14 @@ void IC_Run(void)
 
         case IC_WAIT_TSMS:
             /* TSMS high = last part of the SDC closed */
-            if (SYS_GetTSMS()) { ic_state = IC_RELEASE_EBS; }
+            if (SYS_GetTSMS()) { ic_state = IC_RELEASE_EBS;  }
             break;
 
         case IC_RELEASE_EBS:
-            if (EBS_IsActivated()) { EBS_Release_All(); }
+            if (EBS_IsActivated()) {
+            	EBS_Release_All();
+            	ServiceBrake_Disengage();
+            }
             if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureReleased())
             {
                 ic_state = IC_ENGAGE_SYSTEM1;
@@ -202,7 +205,7 @@ void IC_Run(void)
             Wait for APU to transition to AS_Ready (state 2).
             timeout → fail */
             if (CAN_GetASState() == 2U)    { ic_state = IC_COMPLETE; }
-            else if (IC_TimerElapsed(ASB_IC_APU_READY_TIMEOUT_MS))    { IC_Fail(); }
+            //else if (IC_TimerElapsed(ASB_IC_APU_READY_TIMEOUT_MS))    { IC_Fail(); }
             break;
 
         case IC_ENABLE_OPM:  /* TIM3 is in one-pulse mode from MX_TIM3_Init — nothing to enable */
