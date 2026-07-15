@@ -13,6 +13,7 @@ void CAN_App_Init(void);
 
 /* TX Tasks */
 void CAN_SendAsbStatus(void);
+void CAN_SendDatalogger(void);
 
 /* RX Processing (called from HAL_CAN_RxFifo0MsgPendingCallback) */
 void CAN_ProcessRxMessage(void);

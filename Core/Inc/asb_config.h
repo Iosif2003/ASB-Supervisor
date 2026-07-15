@@ -34,5 +34,6 @@
 #define ASB_MON_SERVICE_BRAKE_LIMIT  100U  /* 1s: χρόνος actuation */
 #define ASB_MON_WATCHDOG_LIMIT       5U
 #define ASB_MON_MANUAL_LIMIT         200U  /* 2s @10ms (παλιά 20×100ms) */
+#define RES_OK                       10U    /* RES signal strength threshold for alive */
 
 #endif /* ASB_CONFIG_H */

@@ -83,7 +83,7 @@ static bool monitoring = false;   /* armed at AS_Ready; αν σπάσει check 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void)
+static void MX_DMA_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_DAC_Init(void);
@@ -205,7 +205,7 @@ int main(void)
                       
             /* AS_FINISHED */
 
-            if(CAN_GetASSetFinished() == CAN_MCU_APU_STATE_MISSION_AS_SET_FINISHED_SET__FINISHED__TRUE_CHOICE) 
+            if(CAN_GetASSetFinished() == CAN_MCU_APU_SET_FINISHED_SET_FINISHED_TRUE_CHOICE) 
             {
               EBS_Activate();
               SDC_Open();
@@ -214,7 +214,7 @@ int main(void)
             
             break;
 
-            case 5U:  /* AS_Emergency */
+            case 4U:  /* AS_Emergency */
             EBS_Activate();
             SDC_Open();
             monitoring = false;
@@ -240,7 +240,7 @@ int main(void)
     
     if (tick_20ms)  { tick_20ms  = false; CAN_SendAsbStatus(); }
 
-    if (tick_100ms) { tick_100ms = false; /* CAN_SendDatalogger();  <- κατηγορία E */ }
+    if (tick_100ms) { tick_100ms = false;  CAN_SendDatalogger(); }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

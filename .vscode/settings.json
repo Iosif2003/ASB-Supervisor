@@ -4,28 +4,36 @@
   "cmake.additionalKits": ["${workspaceFolder}/.vscode/cmake-kits.json"],
 
   // Pre-select the ARM kit so VS Code never silently falls back to the
-  // Homebrew compiler on fresh checkouts or after clearing the build folder.
-  "cmake.defaultKit": "ARM GCC 15.2 (STM32F446RE)",
+  // host compiler on fresh checkouts or after clearing the build folder.
+  "cmake.defaultKit": "ARM GCC 14.3 (STM32CubeIDE)",
 
   // Always pass -DTOOLCHAIN_DIR so CMakeLists.txt points the compiler
   // variables at the correct installation regardless of what is on PATH.
+  // CMAKE_EXPORT_COMPILE_COMMANDS keeps compile_commands.json fresh for clangd.
   "cmake.configureArgs": [
-    "-DCMAKE_COMMAND=cube-cmake"
+    "-DTOOLCHAIN_DIR=C:/ST/STM32CubeIDE_2.1.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.14.3.rel1.win32_1.0.100.202602081740/tools/bin",
+    "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
   ],
 
   // Build folder kept separate from source; matches the CLI workflow.
-  "cmake.buildDirectory": "${workspaceFolder}/build",
+  "cmake.buildDirectory": "${workspaceFolder}/build_cmake",
 
   // Suppress the prompt that asks which kit to use on every fresh configure.
   "cmake.configureOnOpen": true,
-  "cmake.cmakePath": "cube-cmake",
+  "cmake.cmakePath": "cmake",
   "cmake.preferredGenerators": [
     "Ninja"
   ],
-  "stm32cube-ide-clangd.path": "cube",
+
+  // IntelliSense comes from ST's clangd (starm-clangd) + build_cmake/compile_commands.json
+  // (see the .clangd file at the repo root). Point straight at the installed bundle.
+  "stm32cube-ide-clangd.path": "C:/Users/iosif/AppData/Local/stm32cube/bundles/st-arm-clangd/21.1.0+st.2/bin/starm-clangd.exe",
   "stm32cube-ide-clangd.arguments": [
-    "starm-clangd",
-    "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-gcc*",
-    "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-g++*"
-  ]
+    "--query-driver=C:/ST/STM32CubeIDE_2.1.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.14.3.rel1.win32_1.0.100.202602081740/tools/bin/arm-none-eabi-*",
+    "--query-driver=C:/Users/iosif/AppData/Local/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-*"
+  ],
+
+  // clangd provides IntelliSense; stop cpptools from fighting it with
+  // duplicate squiggles/completions.
+  "C_Cpp.intelliSenseEngine": "disabled"
 }
