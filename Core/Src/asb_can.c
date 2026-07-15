@@ -5,7 +5,6 @@
 
 #include "asb_can.h"
 #include "can_mcu.h"
-#include "asb_config.h"
 #include "asb_system.h"
 #include "asb_initial_check.h"
 #include "asb_service_brake.h"
@@ -42,18 +41,16 @@ static float brake_pressure_rear  = 0.0f;
 
 /* ── APU alive tracking ── */
 static uint32_t apu_last_rx_tick = 0U;
-static uint32_t brake_front_last_rx_tick = 0U;
-static uint32_t brake_rear_last_rx_tick = 0U;
-static uint32_t res_last_rx_tick = 0U;
+static uint32_t brake_last_rx_tick = 0U;
+//static uint32_t res_last_rx_tick = 0U;
 
 
 /* ── Initialization ── */
 void CAN_App_Init(void)
 {
-    apu_last_rx_tick         = HAL_GetTick();
-    brake_front_last_rx_tick = HAL_GetTick();
-    brake_rear_last_rx_tick  = HAL_GetTick();
-    res_last_rx_tick         = HAL_GetTick();
+    apu_last_rx_tick   = HAL_GetTick();
+    brake_last_rx_tick = HAL_GetTick();
+    //res_last_rx_tick   = HAL_GetTick();
 
     CAN_FilterTypeDef fc;
 
@@ -152,9 +149,8 @@ void CAN_SendAsbStatus(void)
 {
     can_tx_asb.asms_state             = SYS_GetASMS();
     can_tx_asb.tsms_out               = SYS_GetTSMS();   /* raw: 1 = closed, same as main */
-    can_tx_asb.r_ebs_status           = EBS_State();
-    can_tx_asb.ebs_status             = EBS_State();
-    can_tx_asb.sdc_ok                 = SDC_IsClosed();
+    can_tx_asb.r_ebs_status           = EBS_State;
+    can_tx_asb.ebs_status             = EBS_State(); 
     can_tx_asb.initial_check_step     = (uint8_t)IC_GetState();
     if(IC_GetState()>= IC_NOTIFY_APU) { can_tx_asb.initial_checked = true; }
     else { can_tx_asb.initial_checked = false; }    
@@ -167,20 +163,12 @@ void CAN_SendAsbStatus(void)
     CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, tx_data);
 }
 
-/* DBC: τα pressure signals του ASB_Datalogger είναι 8-bit, scale 1 → raw bar, 0..255 */
-static uint8_t pressure_to_u8(float bar)
-{
-    if (bar <= 0.0f)   { return 0U; }
-    if (bar >= 255.0f) { return 255U; }
-    return (uint8_t)bar;
-}
-
 void CAN_SendDatalogger(void)
 {
-    can_tx_datalogger.brake_pressure_front                      = pressure_to_u8(brake_pressure_front);
-    can_tx_datalogger.brake_pressure_rear                       = pressure_to_u8(brake_pressure_rear);
-    can_tx_datalogger.ebs_tank_pressure_sensor                  = pressure_to_u8(Sensors_GetTankPressure1());
-    can_tx_datalogger.ebs_redundancy_tank_pressure_sensor       = pressure_to_u8(Sensors_GetTankPressure2());
+    can_tx_datalogger.brake_pressure_front                      = (uint16_t)(brake_pressure_front * 100.0f);
+    can_tx_datalogger.brake_pressure_rear                       = (uint16_t)(brake_pressure_rear * 100.0f);
+    can_tx_datalogger.ebs_tank_pressure_sensor                  = (uint16_t)(Sensors_GetTankPressure1() * 100.0f);
+    can_tx_datalogger.ebs_redundancy_tank_pressure_sensor       = (uint16_t)(Sensors_GetTankPressure2() * 100.0f);
     can_tx_datalogger.eb_sstate_activated                       = (EBS_State() == EBS_TRIGGERED) ? 1U : 0U;
     can_tx_datalogger.eb_sstate_armed                           = (EBS_State() == EBS_ARMED) ? 1U : 0U;
     can_tx_datalogger.eb_sstate_unavailable                     = (EBS_State() == EBS_UNAVAILABLE) ? 1U : 0U; 
@@ -191,63 +179,55 @@ void CAN_SendDatalogger(void)
     can_tx_datalogger.ebs_redundancy_activation_valve_ok        = (SYS_GetInterlock2()) ? 1U : 0U;
     can_tx_datalogger.steering_actuator_interlock               = (SYS_GetInterlockSteering()) ? 1U : 0U;
     can_tx_datalogger.propotional_valve_ok                      = (SYS_GetInterlockService()) ? 1U : 0U;
-    can_tx_datalogger.watchdog_ok                               = WDG_IsRunning() ? 1U : 0U;
+    can_tx_datalogger.watchdog_ok                               = 1U; //TODO: FIX it
 
-    can_mcu_asb_datalogger_pack(tx_data, &can_tx_datalogger, sizeof(tx_data));
-    CAN_SendStdMessage(CAN_MCU_ASB_DATALOGGER_FRAME_ID, CAN_MCU_ASB_DATALOGGER_LENGTH, tx_data);
+      
+
+    can_mcu_datalogger_pack(tx_data, &can_tx_datalogger, sizeof(tx_data));
+    CAN_SendStdMessage(CAN_MCU_DATALOGGER_FRAME_ID, CAN_MCU_DATALOGGER_LENGTH, tx_data);
 }
 
 void CAN_ProcessRxMessage(void)
 {
-    if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0,
-                              &msg_header_rx, rx_data) != HAL_OK)
+    if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &msg_header_rx, rx_data) != HAL_OK)
     {
         Error_Handler();
     }
 
     switch (msg_header_rx.StdId)
     {
-        case CAN_MCU_SMU_BRAKE_FRAME_ID:
-            if (can_mcu_smu_brake_unpack(&can_dash_brake, rx_data, msg_header_rx.DLC) == 0)
-            {
-                brake_pressure_front = can_mcu_smu_brake_brake_pressure_front_decode(can_dash_brake.brake_pressure_front);
-
-                /* Monitor if brake pressure front is alive */
-                brake_front_last_rx_tick = HAL_GetTick();
-            }
+        case CAN_MCU_DASH_BRAKE_FRAME_ID:
+            can_mcu_dash_brake_unpack(&can_dash_brake, rx_data, msg_header_rx.DLC);
+            brake_pressure_front = can_mcu_dash_brake_brake_pressure_front_decode(can_dash_brake.brake_pressure_front);
+            
+            /* Monitor if brake pressure front is alive */
+            brake_last_rx_tick = HAL_GetTick();
             break;
-
         case CAN_MCU_VCU_BRAKE_FRAME_ID:
-            if (can_mcu_vcu_brake_unpack(&can_vcu_brake, rx_data, msg_header_rx.DLC) == 0)
-            {
-                brake_pressure_rear = can_mcu_vcu_brake_hydr_press_rear_decode(can_vcu_brake.hydr_press_rear);
-
-                /* Monitor if brake pressure rear is alive */
-                brake_rear_last_rx_tick = HAL_GetTick();
-            }
+            can_mcu_vcu_brake_unpack(&can_vcu_brake, rx_data, msg_header_rx.DLC);
+            brake_pressure_rear = can_mcu_vcu_brake_brake_pressure_rear_decode(can_vcu_brake.hydr_press_rear);
+            
+            /* Monitor if brake pressure rear is alive */
+            brake_last_rx_tick = HAL_GetTick();
             break;
-
         case CAN_MCU_DV_SYSTEM_STATUS_FRAME_ID:
-            if (can_mcu_dv_system_status_unpack(&can_apu_state, rx_data, msg_header_rx.DLC) == 0)
-            {
-                /*Monitor if APU is alive*/
-                apu_last_rx_tick = HAL_GetTick();
-            }
+            can_mcu_apu_state_mission_unpack(&can_apu_state, rx_data, msg_header_rx.DLC);
+            
+            /*Monitor if APU is alive*/
+            apu_last_rx_tick = HAL_GetTick();
             break;
 
         case CAN_MCU_VCU_BOOLS_FRAME_ID:
             can_mcu_vcu_bools_unpack(&can_vcu_bools, rx_data, msg_header_rx.DLC);
             break;
 
-        case CAN_MCU_RES_STATUS_FRAME_ID:
-            if (can_mcu_res_status_unpack(&can_res, rx_data, msg_header_rx.DLC) == 0)
-            {
-                /* Monitor if RES is alive */
-                if (can_res.signal_strength > RES_OK) { res_last_rx_tick = HAL_GetTick(); }
-            }
-            break;
+       case CAN_MCU_RES_STATUS_FRAME_ID:
+            can_mcu_res_status_unpack(&can_res, rx_data, msg_header_rx.DLC);
 
-        case CAN_MCU_APU_SET_FINISHED_FRAME_ID:
+            /* Monitor if RES is alive */
+            if(can_res.signal_strength > RES_OK)    {res_last_rx_tick = HAL_GetTick();}
+            break;
+    case CAN_MCU_APU_SET_FINISHED_FRAME_ID:
             can_mcu_apu_set_finished_unpack(&can_apu_set_finished, rx_data, msg_header_rx.DLC);
             break;
 
@@ -299,7 +279,7 @@ float CAN_GetBrakePressureAverage(void)
 
 /* ── RX Getters — RES ── */
 
-uint8_t CAN_GetRESStop(void)
+/*uint8_t CAN_GetRESStop(void)
 {
     return can_res.stop;
 }
@@ -322,7 +302,7 @@ uint8_t CAN_GetRESSignalStrength(void)
 bool CAN_GetRESEmergency(void)
 {
     return (can_res.stop == CAN_MCU_RES_STATUS_STOP_ON_CHOICE);
-}
+}*/
 
 /* ── RX Getters — RES Init (NMT from APU) ── */
 
@@ -345,18 +325,15 @@ bool CAN_IsAPUAlive(void)
 
 /* ── RES Alive ── */
 
-bool CAN_IsRESAlive(void)
+/*bool CAN_IsRESAlive(void)
 {
     return (HAL_GetTick() - res_last_rx_tick < 100U);
-}
+}*/
 
 /* ── Brake Pressure Alive ── */
 
 bool CAN_IsBrakePressureAlive(void)
 {
-    /* Sheet 8: sensors @10ms, timeout 100ms — και οι δύο πηγές πρέπει να είναι ζωντανές */
-    uint32_t now = HAL_GetTick();
-    return (now - brake_front_last_rx_tick < 100U) &&
-           (now - brake_rear_last_rx_tick  < 100U);
+    return (HAL_GetTick() - brake_last_rx_tick < 100U);  /* Sheet 8: dashboard @10ms, timeout 100ms */
 }
 
