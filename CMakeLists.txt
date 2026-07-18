@@ -9,17 +9,68 @@ if(NOT DEFINED TOOLCHAIN_PREFIX)
     set(TOOLCHAIN_PREFIX arm-none-eabi-)
 endif()
 
-# Allow override via -DTOOLCHAIN_DIR=... to point at a specific install
-# e.g. -DTOOLCHAIN_DIR="/Applications/ArmGNUToolchain/15.2.rel1/arm-none-eabi/bin"
+# ---------------------------------------------------------------------------
+# Toolchain auto-detection (Windows / macOS / Linux)
+# ---------------------------------------------------------------------------
+# Priority:
+#   1. -DTOOLCHAIN_DIR=<bin dir>  explicit override on the cmake command line
+#   2. Known install locations (STM32CubeIDE, STM32CubeCLT, Arm GNU Toolchain)
+#      newest version first
+#   3. Whatever arm-none-eabi-gcc is on PATH (last resort — the Homebrew
+#      formula ships without newlib, see the sysroot check below)
 if(DEFINED TOOLCHAIN_DIR)
-    set(_TC_PATH "${TOOLCHAIN_DIR}/")
+    set(_TC_CANDIDATE_DIRS "${TOOLCHAIN_DIR}")
 else()
-    set(_TC_PATH "")
+    set(_TC_GLOBS
+        # STM32CubeIDE bundled GNU tools
+        "C:/ST/STM32CubeIDE_*/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.*/tools/bin"
+        "/Applications/STM32CubeIDE*.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.*/tools/bin"
+        "/opt/st/stm32cubeide*/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.*/tools/bin"
+        # STM32Cube bundles (newer CubeIDE / VS Code extension installs)
+        "$ENV{LOCALAPPDATA}/stm32cube/bundles/gnu-tools-for-stm32/*/bin"
+        "$ENV{HOME}/AppData/Local/stm32cube/bundles/gnu-tools-for-stm32/*/bin"
+        "$ENV{HOME}/Library/Application Support/stm32cube/bundles/gnu-tools-for-stm32/*/bin"
+        "$ENV{HOME}/.local/share/stm32cube/bundles/gnu-tools-for-stm32/*/bin"
+        # STM32CubeCLT
+        "C:/ST/STM32CubeCLT_*/GNU-tools-for-STM32/bin"
+        "/opt/ST/STM32CubeCLT_*/GNU-tools-for-STM32/bin"
+        # Arm's official GNU toolchain
+        "/Applications/ArmGNUToolchain/*/arm-none-eabi/bin"
+        "C:/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/*/bin"
+        "C:/Program Files/Arm GNU Toolchain arm-none-eabi/*/bin"
+    )
+    set(_TC_CANDIDATE_DIRS "")
+    foreach(_glob IN LISTS _TC_GLOBS)
+        file(GLOB _hits LIST_DIRECTORIES true "${_glob}")
+        if(_hits)
+            list(SORT _hits ORDER DESCENDING)   # newest version first
+            list(APPEND _TC_CANDIDATE_DIRS ${_hits})
+        endif()
+    endforeach()
 endif()
 
-set(CMAKE_C_COMPILER   ${_TC_PATH}${TOOLCHAIN_PREFIX}gcc)
-set(CMAKE_CXX_COMPILER ${_TC_PATH}${TOOLCHAIN_PREFIX}g++)
-set(CMAKE_ASM_COMPILER ${_TC_PATH}${TOOLCHAIN_PREFIX}gcc)
+# HINTS are searched before the system PATH, so a full install wins over
+# a bare compiler that happens to be on PATH.
+find_program(ARM_NONE_EABI_GCC
+    NAMES ${TOOLCHAIN_PREFIX}gcc
+    HINTS ${_TC_CANDIDATE_DIRS}
+    REQUIRED
+)
+get_filename_component(_TC_BIN "${ARM_NONE_EABI_GCC}" DIRECTORY)
+message(STATUS "ARM toolchain: ${_TC_BIN}")
+
+find_program(ARM_NONE_EABI_GXX
+    NAMES ${TOOLCHAIN_PREFIX}g++
+    HINTS "${_TC_BIN}"
+    NO_DEFAULT_PATH
+)
+if(NOT ARM_NONE_EABI_GXX)
+    set(ARM_NONE_EABI_GXX "${ARM_NONE_EABI_GCC}")   # C-only toolchain
+endif()
+
+set(CMAKE_C_COMPILER   "${ARM_NONE_EABI_GCC}")
+set(CMAKE_CXX_COMPILER "${ARM_NONE_EABI_GXX}")
+set(CMAKE_ASM_COMPILER "${ARM_NONE_EABI_GCC}")
 
 # Prevent CMake from testing the compiler with a full executable link
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)

@@ -1,6 +1,32 @@
+# OS junk
 .DS_Store
-build/
+Thumbs.db
+
+# STM32CubeIDE managed builds & workspace metadata
 Debug/
-.cache/
+Release/
 .settings/
-build_cmake/
+.metadata/
+
+# CMake build folders
+build/
+build_*/
+cmake-build-*/
+out/
+
+# Generated / editor caches
+compile_commands.json
+.cache/
+CMakeUserPresets.json
+
+# Build artifacts anywhere
+*.o
+*.obj
+*.d
+*.su
+*.cyclo
+*.elf
+*.bin
+*.hex
+*.map
+*.list

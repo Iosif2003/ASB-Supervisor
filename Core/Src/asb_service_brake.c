@@ -1,5 +1,5 @@
 /* =========================================================
- * ASB Service Brake — Implementation
+ * ASB Service Brake - Implementation
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 
@@ -43,8 +43,8 @@ void ServiceBrake_Park(void)
 void ServiceBrake_Available(void)
 {
     service_brake_state = SERVICE_BRAKE_AVAILABLE;
-    // TO DO: Future implementation for available state, 
-    // or now it just sets the state without changing the DAC value}
+    // TODO: implement the available state properly, for now it only
+    // sets the state and leaves the DAC alone
 }
 /* Service Brake State */
 ServiceBrakeState_t ServiceBrake_State(void) { return service_brake_state; }

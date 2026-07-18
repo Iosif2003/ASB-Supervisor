@@ -4,15 +4,15 @@
 #include <stdbool.h>
 
 /* =========================================================
- * ASB Service Brake — asb_service_brake.h
+ * ASB Service Brake - asb_service_brake.h
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 
 /* Service Brake States */
 typedef enum {
-    SERVICE_BRAKE_DISENGAGED = 1,  // DAC = 0    — no pressure
-    SERVICE_BRAKE_ENGAGED    = 2,  // DAC = 4095 — full pressure
-    SERVICE_BRAKE_PARK       = 3,   // DAC = 2000 — hold, vehicle stationary
+    SERVICE_BRAKE_DISENGAGED = 1,  // DAC = 0    - no pressure
+    SERVICE_BRAKE_ENGAGED    = 2,  // DAC = 4095 - full pressure
+    SERVICE_BRAKE_PARK       = 3,   // DAC = 2000 - hold, vehicle stationary
     SERVICE_BRAKE_AVAILABLE  = 4    
 } ServiceBrakeState_t;
 

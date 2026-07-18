@@ -76,7 +76,7 @@ uint16_t adc_buffer[ASB_ADC_BUFFER_SIZE];
 static volatile bool tick_10ms  = false;
 static volatile bool tick_20ms  = false;
 static volatile bool tick_100ms = false;
-static bool monitoring = false;   /* armed at AS_Ready; αν σπάσει check → EBS + SDC open */
+static bool monitoring = false;   /* armed at AS_Ready; if a check breaks -> EBS + SDC open */
 
 /* USER CODE END PV */
 
@@ -158,7 +158,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim4);   /* Monitoring interval   */
   HAL_TIM_Base_Start_IT(&htim5);   /* CAN ASB TX            */
   HAL_TIM_Base_Start_IT(&htim7);   /* CAN Datalogger TX     */
-  WDG_Start();                     /* Watchdog PWM — sets wdg_is_running so the self-healing WDG_Reset() covers boot-to-IC too */
+  WDG_Start();                     /* Watchdog PWM - sets wdg_is_running so the self-healing WDG_Reset() covers boot-to-IC too */
   HAL_DAC_Start(&hdac, DAC_CHANNEL_1);       /* Service brake DAC */
   
   /* USER CODE END 2 */
@@ -177,20 +177,18 @@ int main(void)
         switch (CAN_GetASState())
           {
             case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_OFF_CHOICE:  /* AS_Off */
-            if (IC_GetState() < IC_SET_DIGPIN_HIGH) { SDC_Open(); } 
-            // Ensure SDC is open if initial check hasn't progressed past 
-            // the point of setting the digital pin high
+            if (IC_GetState() < IC_SET_DIGPIN_HIGH) { SDC_Open(); }
+            // keep SDC open until the initial check reaches the dig-pin-high step
             IC_Run();
             monitoring = false;
 
             break;
 
             case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_READY_CHOICE:  /* AS_Ready */
-            if ( ServiceBrake_State() != SERVICE_BRAKE_PARK) { ServiceBrake_Park(); } 
-            // Set service brake to park position as a safety measure 
-            // in case something goes wrong and the vehicle starts moving 
-            if (EBS_State() != EBS_ARMED) { SDC_Open(); } 
-            // Ensure SDC is open if EBS is not armed to prevent unintended braking
+            if ( ServiceBrake_State() != SERVICE_BRAKE_PARK) { ServiceBrake_Park(); }
+            // park the service brake so the car cant roll if something goes wrong
+            if (EBS_State() != EBS_ARMED) { SDC_Open(); }
+            // EBS has to be armed at this point, otherwise keep the SDC open
             monitoring = true;
 
             break;
@@ -200,8 +198,7 @@ int main(void)
             { 
               ServiceBrake_Disengage();
               ServiceBrake_Available();
-            }  // Set service brake to available position to allow for braking when needed, 
-               // but not applying pressure yet
+            }  // make the service brake available - ready to brake but no pressure yet
                       
             /* AS_FINISHED */
 
@@ -209,8 +206,7 @@ int main(void)
             {
               EBS_Activate();
               SDC_Open();
-            }   // If APU sends that the mission is finished, activate EBS and open SDC to ensure 
-                // the vehicle is stopped, and disable watchdog as a safety measure since we are finished
+            }   // APU says mission finished -> EBS + SDC open, car stays stopped
             
             break;
 
@@ -226,7 +222,7 @@ int main(void)
             break;
           }
 
-          /* Continuous monitoring — αν σπάσει armed check → EBS + open SDC */
+          /* continuous monitoring - failed check while armed -> EBS + open SDC */
           if (monitoring && !Monitor_Run()) { EBS_Activate(); SDC_Open(); }
         }
       else if (SYS_GetSelectedMission() == MISSION_MANUAL)
@@ -319,7 +315,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ENABLE;
-  /* Scan triggered by TIM2 TRGO every 10ms — continuous/software-start mode
+  /* Scan triggered by TIM2 TRGO every 10ms - continuous/software-start mode
      free-runs and floods the CPU with DMA interrupts (~1.5us period),
      starving the main loop completely */
   hadc1.Init.ContinuousConvMode = DISABLE;
@@ -337,14 +333,14 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_15;   /* PC5 = TankPressure1 → adc_buffer[0] */
+  sConfig.Channel = ADC_CHANNEL_15;   /* PC5 = TankPressure1 -> adc_buffer[0] */
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  sConfig.Channel = ADC_CHANNEL_8;    /* PB0 = TankPressure2 → adc_buffer[1] */
+  sConfig.Channel = ADC_CHANNEL_8;    /* PB0 = TankPressure2 -> adc_buffer[1] */
   sConfig.Rank = 2;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -773,7 +769,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : AS_Relay_Signal_Pin (open drain — external pull-up on board) */
+  /*Configure GPIO pin : AS_Relay_Signal_Pin (open drain - external pull-up on board) */
   GPIO_InitStruct.Pin = AS_Relay_Signal_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -801,14 +797,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     else if (htim->Instance == TIM7) { tick_100ms = true; }   /* 100 ms */
 }
 
-/* CAN RΧ */
+/* CAN RX */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
     if (hcan->Instance == CAN1)
         CAN_ProcessRxMessage();
 }
 
-/* ADC DMA complete — update tank pressure readings */
+/* ADC DMA complete - update tank pressure readings */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
     if (hadc->Instance == ADC1)

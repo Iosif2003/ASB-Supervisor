@@ -1,5 +1,5 @@
 /* =========================================================
- * ASB EBS Control — Implementation
+ * ASB EBS Control - Implementation
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 

@@ -1,0 +1,26 @@
+# Normalize line endings so Windows and macOS checkouts never fight.
+* text=auto
+
+# Sources always committed with LF
+*.c   text eol=lf
+*.h   text eol=lf
+*.s   text eol=lf
+*.ld  text eol=lf
+*.md  text eol=lf
+*.json text eol=lf
+*.txt text eol=lf
+*.ioc text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Windows scripts keep CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.sh  text eol=lf
+
+# Binaries — never touch
+*.elf binary
+*.bin binary
+*.hex binary
+*.png binary
+*.jpg binary

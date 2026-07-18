@@ -1,5 +1,5 @@
 /* =========================================================
- * ASB CAN — Implementation
+ * ASB CAN - Implementation
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 
@@ -19,7 +19,7 @@
 /* External handles from main.c */
 extern CAN_HandleTypeDef hcan1;
 
-/* ── Private RX/TX structs ── */
+/* Private RX/TX structs */
 static struct can_mcu_dv_system_status_t  can_apu_state;
 static struct can_mcu_vcu_bools_t         can_vcu_bools;
 static struct can_mcu_smu_brake_t         can_smu_brake;
@@ -30,24 +30,24 @@ static struct can_mcu_vcu_brake_t 		  can_vcu_brake;
 static struct can_mcu_apu_set_finished_t  can_apu_set_finished;   
 
 
-/* ── Private CAN buffers ── */
+/* Private CAN buffers */
 static CAN_RxHeaderTypeDef msg_header_rx;
 static uint8_t rx_data[8];
 static uint8_t tx_data[8];
 static uint32_t tx_mailbox;
 
-/* ── Decoded RX values ── */
+/* Decoded RX values */
 static float brake_pressure_front = 0.0f;
 static float brake_pressure_rear  = 0.0f;
 
-/* ── APU alive tracking ── */
+/* APU alive tracking */
 static uint32_t apu_last_rx_tick = 0U;
 static uint32_t brake_front_last_rx_tick = 0U;
 static uint32_t brake_rear_last_rx_tick = 0U;
 static uint32_t res_last_rx_tick = 0U;
 
 
-/* ── Initialization ── */
+/* Initialization */
 void CAN_App_Init(void)
 {
     apu_last_rx_tick         = HAL_GetTick();
@@ -97,7 +97,7 @@ void CAN_App_Init(void)
         Error_Handler();
     }
 
-    /* Enable RX interrupt — without this HAL_CAN_RxFifo0MsgPendingCallback never fires */
+    /* Enable RX interrupt - without this HAL_CAN_RxFifo0MsgPendingCallback never fires */
     if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
         Error_Handler();
     }
@@ -126,7 +126,7 @@ static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc,
     hdr.RTR   = CAN_RTR_DATA;
     hdr.DLC   = dlc;
 
-    /* Wait for free mailbox — max 5ms */
+    /* Wait for free mailbox - max 5ms */
     while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0U)
     {
         if ((HAL_GetTick() - start) > 5U)
@@ -147,7 +147,7 @@ static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc,
     return HAL_OK;
 }
 
-/* ── CAN Senders ── */
+/* CAN Senders */
 void CAN_SendAsbStatus(void)
 {
     can_tx_asb.asms_state             = SYS_GetASMS();
@@ -157,17 +157,15 @@ void CAN_SendAsbStatus(void)
     can_tx_asb.sdc_ok                 = SDC_IsClosed();
     can_tx_asb.initial_check_step     = (uint8_t)IC_GetState();
     if(IC_GetState()>= IC_NOTIFY_APU) { can_tx_asb.initial_checked = true; }
-    else { can_tx_asb.initial_checked = false; }    
-    // This ensures that initial checked is only true when the state is IC_NOTIFY_APU or higher,
-    // which means that the initial check process has been completed and the APU has been notified.
-    // Before that, it is false to indicate that the initial check is not yet complete.
+    else { can_tx_asb.initial_checked = false; }
+    // initial_checked only goes true from IC_NOTIFY_APU onwards (check done, APU told)
     can_tx_asb.steering_state          = SYS_GetInterlockSteering();
 
     can_mcu_asb_pack(tx_data, &can_tx_asb, sizeof(tx_data));
     CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, tx_data);
 }
 
-/* DBC: τα pressure signals του ASB_Datalogger είναι 8-bit, scale 1 → raw bar, 0..255 */
+/* DBC: the ASB_Datalogger pressure signals are 8-bit, scale 1 -> raw bar, 0..255 */
 static uint8_t pressure_to_u8(float bar)
 {
     if (bar <= 0.0f)   { return 0U; }
@@ -255,7 +253,7 @@ void CAN_ProcessRxMessage(void)
     }
 }
 
-/* ── RX Getters — APU ── */
+/* RX Getters - APU */
 
 uint8_t CAN_GetASState(void)
 {
@@ -272,14 +270,14 @@ bool CAN_GetASSetFinished(void)
     return can_apu_set_finished.set_finished;
 }
 
-/* ── RX Getters — VCU ── */
+/* RX Getters - VCU */
 
 uint8_t CAN_GetVCUMode(void)
 {
     return can_vcu_bools.mode;
 }
 
-/* ── RX Getters — DASH ── */
+/* RX Getters - DASH */
 
 float CAN_GetBrakePressureFront(void)
 {
@@ -296,7 +294,7 @@ float CAN_GetBrakePressureAverage(void)
     return (brake_pressure_front + brake_pressure_rear) / 2.0f;
 }
 
-/* ── RX Getters — RES ── */
+/* RX Getters - RES */
 
 uint8_t CAN_GetRESStop(void)
 {
@@ -323,7 +321,7 @@ bool CAN_GetRESEmergency(void)
     return (can_res.stop == CAN_MCU_RES_STATUS_STOP_ON_CHOICE);
 }
 
-/* ── RX Getters — RES Init (NMT from APU) ── */
+/* RX Getters - RES Init (NMT from APU) */
 
 /*uint8_t CAN_GetRESInitRequestedState(void)
 {
@@ -335,25 +333,25 @@ uint8_t CAN_GetRESInitAddressedNode(void)
     return can_res_init.addresed_node;
 }*/
 
-/* ── APU Alive ── */
+/* APU Alive */
 
 bool CAN_IsAPUAlive(void)
 {
     return (HAL_GetTick() - apu_last_rx_tick < 480U);
 }
 
-/* ── RES Alive ── */
+/* RES Alive */
 
 bool CAN_IsRESAlive(void)
 {
     return (HAL_GetTick() - res_last_rx_tick < 100U);
 }
 
-/* ── Brake Pressure Alive ── */
+/* Brake Pressure Alive */
 
 bool CAN_IsBrakePressureAlive(void)
 {
-    /* Sheet 8: sensors @10ms, timeout 100ms — και οι δύο πηγές πρέπει να είναι ζωντανές */
+    /* Sheet 8: sensors @10ms, timeout 100ms - both sources have to be alive */
     uint32_t now = HAL_GetTick();
     return (now - brake_front_last_rx_tick < 100U) &&
            (now - brake_rear_last_rx_tick  < 100U);

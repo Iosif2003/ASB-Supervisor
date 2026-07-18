@@ -1,5 +1,5 @@
 /* =========================================================
- * ASB System Control — Implementation
+ * ASB System Control - Implementation
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 
@@ -26,7 +26,7 @@ void ASB_System_Init(void) {
     wdg_is_running = false;
     manual_checked = false;
 
-    /* Freeze TIM3 while the core is halted by the debugger — otherwise a
+    /* Freeze TIM3 while the core is halted by the debugger - otherwise a
        breakpoint held >40ms fires the OPM update event and the watchdog
        pulse dies. No effect when no debugger is attached. */
     __HAL_DBGMCU_FREEZE_TIM3();
@@ -61,7 +61,7 @@ void WDG_Reset(void)
     __HAL_TIM_SET_COUNTER(&htim3, 0);
 
     /* OPM trap: one missed 40ms deadline (e.g. debugger halt) fires the
-       update event and hardware clears CEN — a counter write alone can
+       update event and hardware clears CEN - a counter write alone can
        never restart the pulse train. Being called here proves the code is
        alive, so re-arm. Guarded: during WDG_Stop() the timer must stay off. */
     if (wdg_is_running && ((htim3.Instance->CR1 & TIM_CR1_CEN) == 0U))
@@ -77,7 +77,7 @@ void WDG_Stop(void)
     HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);
 
     /* With the channel off the open-drain pin is released and the external
-       pull-up holds the line steadily HIGH — the watchdog circuit can read
+       pull-up holds the line steadily HIGH - the watchdog circuit can read
        that as "alive" and never drop the AS relay. Take the pin over as a
        plain GPIO and drive it LOW so the line is unambiguously dead. */
     GPIO_InitTypeDef gpio = {0};
@@ -162,13 +162,13 @@ int SYS_GetSelectedMission(void)
 /* Manual Checks - Monitoring */
 
 static Check_t manual_run_ok = { .limit = ASB_MON_MANUAL_LIMIT };   
-/* Run — called from main loop every 10ms via timer flag */
+/* Run - called from main loop every 10ms via timer flag */
 void Manual_Run(void)
 {
     if (!manual_checked)
     {
         /* ASMS must be off and the pneumatic system depressurized
-           (EBS unavailable) — no autonomous brake actuation possible */
+           (EBS unavailable) - no autonomous brake actuation possible */
         if (SYS_GetASMS() /*|| EBS_State() != EBS_UNAVAILABLE*/)
         {
             SDC_Open();
@@ -187,8 +187,8 @@ void Manual_Run(void)
     }
     else
     {
-        /* Monitoring — Check() true = healthy; persistent violation (2s)
-           or mission change → SDC open */
+        /* Monitoring - Check() true = healthy; persistent violation (2s)
+           or mission change -> SDC open */
         if (!Check(&manual_run_ok, (!SYS_GetASMS() /*&& EBS_State() == EBS_UNAVAILABLE*/))
         || SYS_GetSelectedMission() != MISSION_MANUAL)
         {

@@ -1,5 +1,5 @@
 /* =========================================================
- * ASB Initial Check — Implementation
+ * ASB Initial Check - Implementation
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 #include "main.h"
@@ -39,20 +39,20 @@ static void IC_SafetyCheck(void)
 
     if(ic_state > IC_WAIT_TSMS && ic_state < IC_COMPLETE)
     {
-        /* TSMS closed once → must stay closed (high). TSMS is after
+        /* TSMS closed once -> must stay closed (high). TSMS is after
            AS_Relay_Out on the vehicle SDC, so this covers relay out
            (and in) as well. */
         if(SYS_GetTSMS() == 0)       { IC_Fail(); }
     }
     else if(ic_state == IC_WAIT_TSMS)
     {
-        /* Waiting for TSMS — the AS relay must stay closed meanwhile */
+        /* Waiting for TSMS - the AS relay must stay closed meanwhile */
         if(SYS_GetASRelayOut() != 1) { IC_Fail(); }
     }
     else if(ic_state > IC_WAIT_RES)
     {
-        /* AS_Relay_In is RES1_Out → RES must stay closed. NOT the relay
-           output: during the watchdog test (stop → wait open → start →
+        /* AS_Relay_In is RES1_Out -> RES must stay closed. NOT the relay
+           output: during the watchdog test (stop -> wait open -> start ->
            wait close) the output toggles by design, In stays high. */
         if(SYS_GetASRelayIn() != 1)  { IC_Fail(); }
     }
@@ -110,10 +110,10 @@ void IC_Run(void)
             break;
 
         case IC_WAIT_SDC_CLOSE_FIRST_TIME:
-            if (SYS_GetASRelayOut()) { ic_state = IC_STOP_WATCHDOG; }
+            if (SYS_GetASRelayOut()) { ic_state = IC_WAIT_TSMS; /*IC_STOP_WATCHDOG;*/ }
             break;
 
-        case IC_STOP_WATCHDOG:
+        /*case IC_STOP_WATCHDOG:
             WDG_Stop();
             ic_state = IC_WAIT_SDC_OPEN_SECOND_TIME;
             break;
@@ -129,7 +129,7 @@ void IC_Run(void)
 
         case IC_WAIT_SDC_CLOSE_SECOND_TIME:
             if (SYS_GetASRelayOut()) { ic_state = IC_WAIT_TSMS; }
-            break;
+            break;*/
 
         case IC_WAIT_TSMS:
             /* TSMS high = last part of the SDC closed */
@@ -203,12 +203,12 @@ void IC_Run(void)
         case IC_NOTIFY_APU:
             /* Signal APU via CAN (initial_checked = true when ic_state == IC_NOTIFY_APU).
             Wait for APU to transition to AS_Ready (state 2).
-            timeout → fail */
+            timeout -> fail */
             if (CAN_GetASState() == 2U)    { ic_state = IC_COMPLETE; }
             //else if (IC_TimerElapsed(ASB_IC_APU_READY_TIMEOUT_MS))    { IC_Fail(); }
             break;
 
-        case IC_ENABLE_OPM:  /* TIM3 is in one-pulse mode from MX_TIM3_Init — nothing to enable */
+        case IC_ENABLE_OPM:  /* TIM3 is in one-pulse mode from MX_TIM3_Init - nothing to enable */
         case IC_COMPLETE:    /* terminal state */
             break;
         }
