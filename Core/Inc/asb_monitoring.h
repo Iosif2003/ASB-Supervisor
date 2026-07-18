@@ -5,12 +5,12 @@
 #include <stdint.h>
 
 typedef struct {
-    uint16_t errors;   /* συνεχόμενα κακά δείγματα */
-    uint16_t limit;    /* πόσα στη σειρά → fail */
+    uint16_t errors;   /* consecutive bad samples */
+    uint16_t limit;    /* how many in a row before we call it a fail */
     bool getter;
 } Check_t;
 
-/* true = OK, false = fail. Καλό δείγμα → reset. */
+/* true = OK, false = fail. a good sample resets the counter */
 static inline bool Check(Check_t *c, bool ok)
 {
     if (ok)                   { c->errors = 0; return true; }
@@ -18,10 +18,10 @@ static inline bool Check(Check_t *c, bool ok)
     return (c->errors < c->limit);
 }
 
-void Monitor_Init(void);        /* μηδενίζει όλους τους counters */
-bool Monitor_Run(void);         /* κάθε 10ms όταν armed· true = όλα ok */
+void Monitor_Init(void);        /* clears all the counters */
+bool Monitor_Run(void);         /* call every 10ms while armed, true = all ok */
 
-/* Αποτελέσματα για CAN status / datalogger */
+/* results for CAN status / datalogger */
 bool Monitor_InterlocksOk(void);
 bool Monitor_TankOk(void);
 bool Monitor_BrakeOk(void);

@@ -38,14 +38,14 @@ extern "C" {
 /* USER CODE BEGIN ET */
 typedef enum {
   Servo_Disengaged = 1,
-  Servo_Engaged,
-  Servo_Available
+  Servo_Engaged    = 2,
+  Servo_Available  = 3
 } ServoEnum;
 
 typedef enum {
   EBS_Unavailable = 1,
-  EBS_Armed,
-  EBS_Triggered
+  EBS_Armed       = 2,
+  EBS_Triggered   = 3
 } EBSEnum;
 
 /* USER CODE END ET */

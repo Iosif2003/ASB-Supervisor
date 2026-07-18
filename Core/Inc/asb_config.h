@@ -2,7 +2,7 @@
 #define ASB_CONFIG_H
 
 /* =========================================================
- * ASB Supervisor — System Configuration
+ * ASB Supervisor - System Configuration
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 
@@ -26,14 +26,14 @@
 #define ASB_SB_DAC_PARK        4095U //TODO: find the right signal
 #define ASB_SB_DAC_ENGAGED     4095U
 
-/* --- Monitoring debounce (μονάδα = 10ms ticks) --- */
+/* --- Monitoring debounce (unit = 10ms ticks) --- */
 #define ASB_MON_INTERLOCK_LIMIT      10U   /* 100ms */
 #define ASB_MON_TANK_LIMIT           10U
 #define ASB_MON_BRAKE_LIMIT          10U
 #define ASB_MON_APU_LIMIT            5U
-#define ASB_MON_SERVICE_BRAKE_LIMIT  100U  /* 1s: χρόνος actuation */
+#define ASB_MON_SERVICE_BRAKE_LIMIT  100U  /* 1s, actuation time */
 #define ASB_MON_WATCHDOG_LIMIT       5U
-#define ASB_MON_MANUAL_LIMIT         200U  /* 2s @10ms (παλιά 20×100ms) */
+#define ASB_MON_MANUAL_LIMIT         200U  /* 2s @10ms (old code had 20x100ms) */
 #define RES_OK                       10U    /* RES signal strength threshold for alive */
 
 #endif /* ASB_CONFIG_H */

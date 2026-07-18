@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 /* =========================================================
- * ASB Sensors — asb_sensors.h
+ * ASB Sensors - asb_sensors.h
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 

@@ -1,5 +1,5 @@
 /* =========================================================
- * ASB Monitor — Implementation
+ * ASB Monitor - Implementation
  * Aristurtle Formula Student | 2026
  * ========================================================= */
 #include "asb_monitoring.h"
@@ -9,7 +9,7 @@
 #include "asb_can.h"
 #include "asb_service_brake.h"
 
-/* ── Ένας counter ανά έλεγχο ── */
+/* one counter per check */
 static Check_t interlock_valve1         = { .limit = ASB_MON_INTERLOCK_LIMIT ,.getter = true};
 static Check_t interlock_valve2         = { .limit = ASB_MON_INTERLOCK_LIMIT ,.getter = true};
 static Check_t interlock_proportional   = { .limit = ASB_MON_INTERLOCK_LIMIT ,.getter = true};
@@ -22,7 +22,7 @@ static Check_t Watchdog_OK              = { .limit = ASB_MON_WATCHDOG_LIMIT ,.ge
 
 
 
-/* ── Βοηθητικές συνθήκες ── */
+/* helper conditions */
 static bool brake_Pressure_ok(void)
 {
     float p = Sensors_GetBrakePressure();
@@ -36,16 +36,16 @@ static bool service_brake_ok(void)//dont like the logic
         return Sensors_GetBrakePressure() > ASB_BRAKE_ACTIVE_MIN_BAR;
     if (s == SERVICE_BRAKE_AVAILABLE && CAN_GetServoCommand() != 0)
         return Sensors_GetBrakePressure() > ASB_BRAKE_ACTIVE_MIN_BAR;
-    return true;   /* disengaged ή available χωρίς εντολή → ok */
+    return true;   /* disengaged, or available with no command -> ok */
 }
 
 static bool watchdog_ok(void)
 {
-    /* SDC κλειστό & RES κλειστό (in=1) αλλά relay άνοιξε (out=0) → watchdog έριξε */
+    /* SDC closed & RES closed (in=1) but relay opened (out=0) -> watchdog tripped it */
     return !(SDC_IsClosed() && SYS_GetASRelayIn() && !SYS_GetASRelayOut());
 }
 
-/* ── API ── */
+/* API */
 void Monitor_Init(void)
 {
     interlock_valve1.errors = interlock_valve2.errors = interlock_proportional.errors = interlock_steering.errors = 0;

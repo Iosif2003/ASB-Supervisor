@@ -1,38 +1,43 @@
 # ASB-Supervisor
 
 STM32F446RE firmware for the ASB (Autonomous System Brake) supervisor.
+Aristurtle Formula Student.
 
-## Building
+## Build
 
-Works identically on Windows and macOS. The ARM toolchain is auto-detected
-from STM32CubeIDE, STM32CubeCLT, the STM32Cube VS Code bundles, or the Arm GNU
-Toolchain — newest install wins. No paths need to be configured.
+### CMake (terminal or VS Code)
 
-### CMake (CLI or VS Code)
+Needs CMake 3.22+ and Ninja, both come with STM32CubeCLT.
+The ARM toolchain is picked up automatically from CubeIDE / CubeCLT /
+Arm GNU Toolchain installs, whichever is newer.
 
-Requires CMake ≥ 3.22 and Ninja (both ship with
-[STM32CubeCLT](https://www.st.com/en/development-tools/stm32cubeclt.html)).
-
-```sh
-cmake --preset debug          # configure  (build_cmake/)
-cmake --build --preset debug  # build → build_cmake/ASB_Supervisor.elf/.bin
-
-cmake --preset release        # size-optimized (-Os) → build_release/
-cmake --build --preset release
+```
+cmake --preset debug
+cmake --build --preset debug
 ```
 
-In VS Code the CMake Tools extension picks up `CMakePresets.json`
-automatically — select the *Debug* or *Release* preset and build.
+Output goes to build_cmake/ (ASB_Supervisor.elf and .bin).
+There is also a release preset (-Os) that builds into build_release/.
 
-To force a specific toolchain: `cmake --preset debug -DTOOLCHAIN_DIR="<path to bin dir>"`.
+If the toolchain is not found automatically point to it manually:
+
+```
+cmake --preset debug -DTOOLCHAIN_DIR="<path to the toolchain bin folder>"
+```
+
+In VS Code just pick the Debug preset when CMake Tools asks and build.
 
 ### STM32CubeIDE
 
-Import as an existing project and build normally (Debug/Release
-configurations). Build output folders are git-ignored.
+Import as existing project and build like normal. Build folders are
+gitignored.
 
-## Flashing
+## Flash
 
-Any of: STM32CubeIDE debug session, `STM32_Programmer_CLI -c port=SWD -d
-build_cmake/ASB_Supervisor.bin 0x08000000 -rst`, or drag-and-drop the `.bin`
-onto the Nucleo mass-storage device.
+From CubeIDE with a debug session, or with the command line:
+
+```
+STM32_Programmer_CLI -c port=SWD -d build_cmake/ASB_Supervisor.bin 0x08000000 -rst
+```
+
+Copying the .bin onto the Nucleo USB drive also works.
