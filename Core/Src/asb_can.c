@@ -289,49 +289,12 @@ float CAN_GetBrakePressureRear(void)
     return brake_pressure_rear;
 }
 
-float CAN_GetBrakePressureAverage(void)
-{
-    return (brake_pressure_front + brake_pressure_rear) / 2.0f;
-}
-
 /* RX Getters - RES */
-
-uint8_t CAN_GetRESStop(void)
-{
-    return can_res.stop;
-}
-
-uint8_t CAN_GetRESToggle(void)
-{
-    return can_res.toggle;
-}
-
-uint8_t CAN_GetRESButton(void)
-{
-    return can_res.button;
-}
 
 uint8_t CAN_GetRESSignalStrength(void)
 {
     return can_res.signal_strength;
 }
-
-bool CAN_GetRESEmergency(void)
-{
-    return (can_res.stop == CAN_MCU_RES_STATUS_STOP_ON_CHOICE);
-}
-
-/* RX Getters - RES Init (NMT from APU) */
-
-/*uint8_t CAN_GetRESInitRequestedState(void)
-{
-    return can_res_init.requested_state;
-}
-
-uint8_t CAN_GetRESInitAddressedNode(void)
-{
-    return can_res_init.addresed_node;
-}*/
 
 /* APU Alive */
 
