@@ -2893,28 +2893,28 @@ struct can_mcu_asb_datalogger_t {
  */
 struct can_mcu_sbg_ecan_msg_gps1_hdt_t {
     /**
-     * Range: 0..65535 (0..655.35 ï¿½)
+     * Range: 0..65535 (0..655.35 °)
      * Scale: 0.01
      * Offset: 0
      */
     uint16_t true_heading;
 
     /**
-     * Range: 0..65535 (0..655.35 ï¿½)
+     * Range: 0..65535 (0..655.35 °)
      * Scale: 0.01
      * Offset: 0
      */
     uint16_t true_heading_acc;
 
     /**
-     * Range: -32768..32767 (-327.68..327.67 ï¿½)
+     * Range: -32768..32767 (-327.68..327.67 °)
      * Scale: 0.01
      * Offset: 0
      */
     int16_t pitch;
 
     /**
-     * Range: 0..65535 (0..655.35 ï¿½)
+     * Range: 0..65535 (0..655.35 °)
      * Scale: 0.01
      * Offset: 0
      */
@@ -2928,7 +2928,7 @@ struct can_mcu_sbg_ecan_msg_gps1_hdt_t {
  */
 struct can_mcu_sbg_ecan_msg_gps1_hdt_info_t {
     /**
-     * Range: 0..2704 (0..2704 ï¿½s)
+     * Range: 0..2704 (0..2704 µs)
      * Scale: 1
      * Offset: 0
      */
@@ -3019,14 +3019,14 @@ struct can_mcu_sbg_ecan_msg_gps1_pos_alt_t {
  */
 struct can_mcu_sbg_ecan_msg_gps1_pos_t {
     /**
-     * Range: -2147483648..2147483647 (-214.74836..214.74836 ï¿½)
+     * Range: -2147483648..2147483647 (-214.74836..214.74836 °)
      * Scale: 1e-07
      * Offset: 0
      */
     int32_t latitude;
 
     /**
-     * Range: -2147483648..2147483647 (-214.74836..214.74836 ï¿½)
+     * Range: -2147483648..2147483647 (-214.74836..214.74836 °)
      * Scale: 1e-07
      * Offset: 0
      */
@@ -3040,7 +3040,7 @@ struct can_mcu_sbg_ecan_msg_gps1_pos_t {
  */
 struct can_mcu_sbg_ecan_msg_gps1_pos_info_t {
     /**
-     * Range: 0..2704 (0..2704 ï¿½s)
+     * Range: 0..2704 (0..2704 µs)
      * Scale: 1
      * Offset: 0
      */
@@ -3061,14 +3061,14 @@ struct can_mcu_sbg_ecan_msg_gps1_pos_info_t {
  */
 struct can_mcu_sbg_ecan_msg_gps1_vel_course_t {
     /**
-     * Range: 0..65535 (0..655.35 ï¿½)
+     * Range: 0..65535 (0..655.35 °)
      * Scale: 0.01
      * Offset: 0
      */
     uint16_t course;
 
     /**
-     * Range: 0..65535 (0..655.35 ï¿½)
+     * Range: 0..65535 (0..655.35 °)
      * Scale: 0.01
      * Offset: 0
      */
@@ -3138,7 +3138,7 @@ struct can_mcu_sbg_ecan_msg_gps1_vel_t {
  */
 struct can_mcu_sbg_ecan_msg_gps1_vel_info_t {
     /**
-     * Range: 0..2704 (0..2704 ï¿½s)
+     * Range: 0..2704 (0..2704 µs)
      * Scale: 1
      * Offset: 0
      */
@@ -3173,7 +3173,7 @@ struct can_mcu_sbg_ecan_msg_odo_vel_t {
  */
 struct can_mcu_sbg_ecan_msg_odo_info_t {
     /**
-     * Range: 0..2704 (0..2704 ï¿½s)
+     * Range: 0..2704 (0..2704 µs)
      * Scale: 1
      * Offset: 0
      */
@@ -3250,7 +3250,7 @@ struct can_mcu_sbg_ecan_msg_mag_1_t {
  */
 struct can_mcu_sbg_ecan_msg_mag_0_t {
     /**
-     * Range: 0..2704 (0..2704 ï¿½s)
+     * Range: 0..2704 (0..2704 µs)
      * Scale: 1
      * Offset: 0
      */
@@ -3404,14 +3404,14 @@ struct can_mcu_sbg_ecan_msg_ekf_altitude_t {
  */
 struct can_mcu_sbg_ecan_msg_ekf_pos_t {
     /**
-     * Range: -2147483648..2147483647 (-214.74836..214.74836 ï¿½)
+     * Range: -2147483648..2147483647 (-214.74836..214.74836 °)
      * Scale: 1e-07
      * Offset: 0
      */
     int32_t latitude;
 
     /**
-     * Range: -2147483648..2147483647 (-214.74836..214.74836 ï¿½)
+     * Range: -2147483648..2147483647 (-214.74836..214.74836 °)
      * Scale: 1e-07
      * Offset: 0
      */
@@ -3537,7 +3537,7 @@ struct can_mcu_sbg_ecan_msg_imu_accel_t {
  */
 struct can_mcu_sbg_ecan_msg_imu_info_t {
     /**
-     * Range: 0..2704 (0..2704 ï¿½s)
+     * Range: 0..2704 (0..2704 µs)
      * Scale: 1
      * Offset: 0
      */
@@ -3551,7 +3551,7 @@ struct can_mcu_sbg_ecan_msg_imu_info_t {
     uint16_t status;
 
     /**
-     * Range: -32768..32767 (-327.68..327.67 ï¿½C)
+     * Range: -32768..32767 (-327.68..327.67 °C)
      * Scale: 0.01
      * Offset: 0
      */
@@ -3621,7 +3621,7 @@ struct can_mcu_sbg_ecan_msg_utc_1_t {
  */
 struct can_mcu_sbg_ecan_msg_utc_0_t {
     /**
-     * Range: 0..2704 (0..2704 ï¿½s)
+     * Range: 0..2704 (0..2704 µs)
      * Scale: 1
      * Offset: 0
      */
@@ -3684,7 +3684,7 @@ struct can_mcu_sbg_ecan_msg_status_02_t {
  */
 struct can_mcu_sbg_ecan_msg_status_01_t {
     /**
-     * Range: 0..2704 (0..2704 ï¿½s)
+     * Range: 0..2704 (0..2704 µs)
      * Scale: 1
      * Offset: 0
      */
@@ -3903,7 +3903,7 @@ struct can_mcu_vel_and_ang_poi_t {
     int16_t vel_a_poi;
 
     /**
-     * Range: -13333..13333 (-40..40 ï¿½)
+     * Range: -13333..13333 (-40..40 °)
      * Scale: 0.003
      * Offset: 0
      */
@@ -3945,14 +3945,14 @@ struct can_mcu_dist_poi_t {
  */
 struct can_mcu_pitch_and_roll_t {
     /**
-     * Range: -30000..30000 (-90..90 ï¿½)
+     * Range: -30000..30000 (-90..90 °)
      * Scale: 0.003
      * Offset: 0
      */
     int16_t roll;
 
     /**
-     * Range: -30000..30000 (-90..90 ï¿½)
+     * Range: -30000..30000 (-90..90 °)
      * Scale: 0.003
      * Offset: 0
      */
@@ -3994,21 +3994,21 @@ struct can_mcu_acc_t {
  */
 struct can_mcu_rate_t {
     /**
-     * Range: -32768..32767 (-655.36..655.34 ï¿½/s)
+     * Range: -32768..32767 (-655.36..655.34 °/s)
      * Scale: 0.02
      * Offset: 0
      */
     int16_t rate_x;
 
     /**
-     * Range: -32768..32767 (-655.36..655.34 ï¿½/s)
+     * Range: -32768..32767 (-655.36..655.34 °/s)
      * Scale: 0.02
      * Offset: 0
      */
     int16_t rate_y;
 
     /**
-     * Range: -32768..32767 (-655.36..655.34 ï¿½/s)
+     * Range: -32768..32767 (-655.36..655.34 °/s)
      * Scale: 0.02
      * Offset: 0
      */
@@ -4099,7 +4099,7 @@ struct can_mcu_status_t {
     uint8_t status_ok;
 
     /**
-     * Range: -200..850 (-20..85 ï¿½C)
+     * Range: -200..850 (-20..85 °C)
      * Scale: 0.1
      * Offset: 0
      */
@@ -4141,7 +4141,7 @@ struct can_mcu_vel_and_ang_t {
     int16_t vel_a;
 
     /**
-     * Range: -13333..13333 (-40..40 ï¿½)
+     * Range: -13333..13333 (-40..40 °)
      * Scale: 0.003
      * Offset: 0
      */
@@ -4162,7 +4162,7 @@ struct can_mcu_vel_and_ang_sp_t {
     int16_t vel_a_sp;
 
     /**
-     * Range: -13333..13333 (-40..40 ï¿½)
+     * Range: -13333..13333 (-40..40 °)
      * Scale: 0.003
      * Offset: 0
      */

@@ -13848,7 +13848,7 @@ int can_mcu_smu_steering_rls_pack(
 
     memset(&dst_p[0], 0, 8);
 
-    steering_angle_deg = (uint8_t)src_p->steering_angle_deg;
+    memcpy(&steering_angle_deg, &src_p->steering_angle_deg, sizeof(steering_angle_deg));
     dst_p[0] |= pack_left_shift_u8(steering_angle_deg, 0u, 0xffu);
     dst_p[1] |= pack_left_shift_u8(src_p->sensor_raw_16bit, 0u, 0xffu);
 
@@ -13867,7 +13867,7 @@ int can_mcu_smu_steering_rls_unpack(
     }
 
     steering_angle_deg = unpack_right_shift_u8(src_p[0], 0u, 0xffu);
-    dst_p->steering_angle_deg = (double)steering_angle_deg;
+    memcpy(&dst_p->steering_angle_deg, &steering_angle_deg, sizeof(dst_p->steering_angle_deg));
     dst_p->sensor_raw_16bit = unpack_right_shift_u8(src_p[1], 0u, 0xffu);
 
     return (0);
