@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
+extern DMA_HandleTypeDef hdma_adc1;
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
@@ -163,6 +164,8 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
 
     HAL_GPIO_DeInit(TankPressure2_GPIO_Port, TankPressure2_Pin);
 
+    /* ADC1 DMA DeInit */
+    HAL_DMA_DeInit(hadc->DMA_Handle);
     /* USER CODE BEGIN ADC1_MspDeInit 1 */
 
     /* USER CODE END ADC1_MspDeInit 1 */
@@ -416,7 +419,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
   if(htim->Instance==TIM3)
   {
     /* USER CODE BEGIN TIM3_MspPostInit 0 */
-
+    /* WatchdogPWM (PC9) is open drain, the pull-up is on the board */
     /* USER CODE END TIM3_MspPostInit 0 */
 
     __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -424,7 +427,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     PC9     ------> TIM3_CH4
     */
     GPIO_InitStruct.Pin = WatchdogPWM_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;   /* open drain - external pull-up on board */
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
