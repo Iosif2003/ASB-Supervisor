@@ -6,20 +6,32 @@
 /* =========================================================
  * ASB EBS Control - asb_ebs.h
  * Aristurtle Formula Student | 2026
+ *
+ * EBS = 2 independent pneumatic circuits (system 1 and system 2),
+ * each with its own tank and solenoid valve feeding one brake cylinder.
+ * Two circuits so that one leak or one dead valve still leaves a
+ * working brake (redundancy).
+ *
+ * The valves are fail-safe:
+ *   pin LOW  -> valve not powered -> air goes to the cylinder -> BRAKING
+ *   pin HIGH -> valve powered     -> cylinder vented          -> released
+ * So the MCU has to actively hold the pins high to drive. A reset, a
+ * crash or a lost supply brakes the car.
  * ========================================================= */
 
- /* EBS Initialization */
+ /* EBS Initialization - both circuits braking */
 void EBS_Init(void);
 
 /* EBS States */
-bool EBS_IsActivated(void);
-bool EBS_System1_State(void);
-bool EBS_System2_State(void);
+bool EBS_IsActivated(void);     /* true = at least one circuit braking */
+bool EBS_System1_State(void);   /* true = circuit 1 braking */
+bool EBS_System2_State(void);   /* true = circuit 2 braking */
 
+/* our own EBS state, sent on the datalogger frame */
 typedef enum {
-    EBS_UNAVAILABLE  = 1,
-    EBS_ARMED        = 2,
-    EBS_TRIGGERED    = 3
+    EBS_UNAVAILABLE  = 1,   /* tank pressure out of range */
+    EBS_ARMED        = 2,   /* tanks ok, valves released, SDC closed - ready to brake */
+    EBS_TRIGGERED    = 3    /* braking, or the SDC (TSMS) is open */
 } EBS_State_t;
 
 EBS_State_t EBS_State(void);
@@ -43,11 +55,11 @@ typedef enum {
 DV_EbsStatus_t  EBS_DvStatus(void);
 DV_REbsStatus_t EBS_DvRedundancyStatus(void);
 
-/* EBS Control */
-void EBS_Activate(void);
+/* EBS Control - Activate = brake, Release = let go */
+void EBS_Activate(void);           /* both circuits brake */
 void EBS_Activate_System1(void);
 void EBS_Activate_System2(void);
-void EBS_Release_All(void);
+void EBS_Release_All(void);        /* both circuits released */
 void EBS_Release_System1(void);
 void EBS_Release_System2(void);
 

@@ -1,6 +1,11 @@
 /* =========================================================
  * ASB Monitor - Implementation
  * Aristurtle Formula Student | 2026
+ *
+ * Every Monitor_Run() call takes one sample of each condition and feeds
+ * it to its Check_t counter (see Check() in asb_monitoring.h). If any
+ * check has been bad for longer than its limit, Monitor_Run() returns
+ * false and main.c brakes + opens the SDC. Limits are in asb_config.h.
  * ========================================================= */
 #include "asb_monitoring.h"
 #include "asb_config.h"
@@ -9,7 +14,8 @@
 #include "asb_can.h"
 #include "asb_service_brake.h"
 
-/* one counter per check */
+/* one counter per check. getter starts true so nothing reads as failed
+   before the first Monitor_Run() */
 static Check_t interlock_valve1         = { .limit = ASB_MON_INTERLOCK_LIMIT ,.getter = true};
 static Check_t interlock_valve2         = { .limit = ASB_MON_INTERLOCK_LIMIT ,.getter = true};
 static Check_t interlock_proportional   = { .limit = ASB_MON_INTERLOCK_LIMIT ,.getter = true};
@@ -19,10 +25,13 @@ static Check_t BrakePressure_OK         = { .limit = ASB_MON_BRAKE_LIMIT ,.gette
 static Check_t apu_OK                   = { .limit = ASB_MON_APU_LIMIT ,.getter = true};
 static Check_t ServiceBrake_OK          = { .limit = ASB_MON_SERVICE_BRAKE_LIMIT ,.getter = true};
 static Check_t Watchdog_OK              = { .limit = ASB_MON_WATCHDOG_LIMIT ,.getter = true};
-static Check_t res_OK					= { .limit = ASB_MON_APU_LIMIT ,.getter = true};
+static Check_t res_OK					= { .limit = ASB_MON_APU_LIMIT ,.getter = true};   /* same limit as the APU */
 
 
-/* helper conditions */
+/* helper conditions - true = healthy */
+
+/* brake pressure is trusted only if both CAN sources are alive, the value
+   is in the sensor range and the SMU doesn't flag it out of range */
 static bool brake_Pressure_ok(void)
 {
     float p = Sensors_GetBrakePressure();
@@ -45,6 +54,11 @@ static bool service_brake_ok(void)
     return true;   /* disengaged, or available with no command -> ok */
 }
 
+/* The watchdog opens the AS relay by itself when the pulses stop.
+   So: we command the SDC closed, the SDC before us is closed (relay in = 1),
+   but the relay output reads open -> the watchdog tripped.
+   During the IC watchdog test this happens on purpose, so the open time
+   there has to stay below ASB_MON_WATCHDOG_LIMIT or this check trips. */
 static bool watchdog_ok(void)
 {
     /* SDC closed & RES closed (in=1) but relay opened (out=0) -> watchdog tripped it */
@@ -57,9 +71,12 @@ void Monitor_Init(void)
     interlock_valve1.errors = interlock_valve2.errors = interlock_proportional.errors = interlock_steering.errors = 0;
     TankPressure_OK.errors = BrakePressure_OK.errors = apu_OK.errors = 0;
     ServiceBrake_OK.errors = Watchdog_OK.errors = res_OK.errors = 0;
-    
+
 }
 
+/* one sample of every check, true only if ALL of them are ok.
+   All checks run on every call (no early return), so every counter
+   keeps counting even when another check already failed. */
 bool Monitor_Run(void)
 {   interlock_valve1.getter       = Check(&interlock_valve1,  SYS_GetInterlock1());
     interlock_valve2.getter       = Check(&interlock_valve2,  SYS_GetInterlock2());
@@ -69,6 +86,7 @@ bool Monitor_Run(void)
     BrakePressure_OK.getter       = Check(&BrakePressure_OK, brake_Pressure_ok());
     apu_OK.getter                 = Check(&apu_OK,   CAN_IsAPUAlive());
     Watchdog_OK.getter            = Check(&Watchdog_OK,   watchdog_ok());
+    /* RES: alive with good signal AND never reported an internal error */
     res_OK.getter 			      = Check(&res_OK, CAN_IsRESAlive() && (CAN_GetRESErrorRegister() == 0U));
     ServiceBrake_OK.getter        = Check(&ServiceBrake_OK, service_brake_ok());
     return TankPressure_OK.getter && BrakePressure_OK.getter && interlock_valve1.getter && interlock_valve2.getter
@@ -78,6 +96,7 @@ bool Monitor_Run(void)
 
 }
 
+/* last results, no new sample taken here (not used anywhere yet) */
 bool Monitor_InterlocksOk(void)   { return interlock_valve1.getter && interlock_valve2.getter && interlock_proportional.getter && interlock_steering.getter; }
 bool Monitor_TankOk(void)         { return TankPressure_OK.getter; }
 bool Monitor_BrakeOk(void)        { return BrakePressure_OK.getter;}

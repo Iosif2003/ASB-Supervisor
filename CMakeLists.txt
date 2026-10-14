@@ -16,7 +16,7 @@ endif()
 #   1. -DTOOLCHAIN_DIR=<bin dir>  explicit override on the cmake command line
 #   2. Known install locations (STM32CubeIDE, STM32CubeCLT, Arm GNU Toolchain)
 #      newest version first
-#   3. Whatever arm-none-eabi-gcc is on PATH (last resort — the Homebrew
+#   3. Whatever arm-none-eabi-gcc is on PATH (last resort, the Homebrew
 #      formula ships without newlib, see the sysroot check below)
 if(DEFINED TOOLCHAIN_DIR)
     set(_TC_CANDIDATE_DIRS "${TOOLCHAIN_DIR}")
@@ -87,7 +87,7 @@ set(CMAKE_C_STANDARD   11)
 set(CMAKE_CXX_STANDARD 17)
 
 # ---------------------------------------------------------------------------
-# MCU flags (STM32F446RE — Cortex-M4, FPU)
+# MCU flags (STM32F446RE, Cortex-M4, FPU)
 # ---------------------------------------------------------------------------
 set(MCU_FLAGS
     -mcpu=cortex-m4

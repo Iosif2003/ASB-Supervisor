@@ -36,6 +36,8 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+/* left over from the old single file version (servo era), not used by
+   the asb_* modules. Use ServiceBrakeState_t / EBS_State_t instead */
 typedef enum {
   Servo_Disengaged = 1,
   Servo_Engaged    = 2,
@@ -106,8 +108,11 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 
 //	ADC	//
-#define ADC_BUFFER_SIZE 2
+#define ADC_BUFFER_SIZE 2   /* same as ASB_ADC_BUFFER_SIZE, used by asb_sensors.c */
 
+/* the defines below are also left over from the old version and not used.
+   careful: the AS state numbers here are the OLD ones. The real values
+   are CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_* in can_mcu.h (from the DBC) */
 // AS MODES	//
 
 #define No_Mission 0

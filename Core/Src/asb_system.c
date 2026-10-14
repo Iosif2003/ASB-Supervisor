@@ -1,6 +1,9 @@
 /* =========================================================
  * ASB System Control - Implementation
  * Aristurtle Formula Student | 2026
+ *
+ * SDC relay, hardware watchdog, digital inputs, mission selection and
+ * the manual driving checks. See asb_system.h for the pin meaning.
  * ========================================================= */
 
 #include "asb_system.h"
@@ -13,9 +16,9 @@
 #include "asb_sensors.h"
 
 /* Private Variables */
-static bool sdc_is_closed     = false;
-static bool wdg_is_running    = false;
-static bool manual_checked = false;
+static bool sdc_is_closed     = false;   /* what we last commanded */
+static bool wdg_is_running    = false;   /* note: never set to true anywhere at the moment */
+static bool manual_checked = false;      /* manual mode: startup check passed */
 
 /* External handles from main.c */
 extern TIM_HandleTypeDef htim3;
@@ -32,10 +35,14 @@ void ASB_System_Init(void) {
        pulse dies. No effect when no debugger is attached. */
     __HAL_DBGMCU_FREEZE_TIM3();
 
+    /* start with the SDC open */
     HAL_GPIO_WritePin(AS_Relay_Signal_GPIO_Port, AS_Relay_Signal_Pin, GPIO_PIN_RESET);
 }
 
 /* SHUTDOWN CONTROL */
+/* AS_Relay_Signal (PB13, open drain with external pull-up):
+   high = we close our relay in the SDC, low = we open it.
+   Whether the relay really closed is read back on AS_Relay_Out. */
 
 /* SDC Close */
 void SDC_Close(void)
@@ -49,14 +56,18 @@ void SDC_Open(void)
 {
     sdc_is_closed = false;
     HAL_GPIO_WritePin(AS_Relay_Signal_GPIO_Port, AS_Relay_Signal_Pin, GPIO_PIN_RESET);
-}       
+}
 
 /* WATCHDOG CONTROL */
 
 /* WDG OPM: timer produces single pulse then stops, code must reset it every 10ms via WDG_Reset(),
  if code freezes, no reset occurs, pulse stops, external watchdog triggers EBS */
+/* TIM3 runs at 1MHz (1us per count) in one pulse mode with a 40ms period,
+   CH4 (PC9) is high for the first 30us of each run. Restarting it every
+   10ms from the main loop gives a 30us pulse every 10ms. If the main
+   loop hangs for more than 40ms the timer stops and the pulses stop. */
 
-/* Watchdog Reset */
+/* Watchdog Reset - restart the one pulse run from 0 */
 void WDG_Reset(void)
 {
     __HAL_TIM_SET_COUNTER(&htim3, 0);
@@ -71,6 +82,7 @@ void WDG_Reset(void)
 
 /* GPIO Input Reads */
 
+/* snapshot of all inputs, refreshed once per 10ms tick by Inputs_Sample() */
 static struct {
     bool asms, tsms, AS_Relay_In, AS_Relay_Out;
     bool interlock1, interlock2, interlock_service, interlock_steering;
@@ -104,6 +116,9 @@ bool WDG_IsRunning(void)    { return wdg_is_running;  }
 
 /* Mission Selection */
 
+/* autonomous = VCU in driverless mode AND the APU has a driverless mission (AMI 1-6)
+   manual     = VCU in manual mode OR AMI 7
+   anything else (e.g. nothing received yet) = none */
 int SYS_GetSelectedMission(void)
 {
     if((CAN_GetVCUMode() == 0) &&
@@ -119,8 +134,10 @@ int SYS_GetSelectedMission(void)
 
 /* Manual Checks - Monitoring */
 
-static Check_t manual_run_ok = { .limit = ASB_MON_MANUAL_LIMIT };   
-/* Run - called from main loop every 10ms via timer flag */
+static Check_t manual_run_ok = { .limit = ASB_MON_MANUAL_LIMIT };   /* not used at the moment */
+/* Run - called from main loop every 10ms via timer flag.
+   In manual driving the ASB only closes the SDC when the EBS can't brake
+   (ASMS off, both tanks vented), and opens it again if that changes. */
 void Manual_Run(void)
 {
     if (!manual_checked)
@@ -147,6 +164,8 @@ void Manual_Run(void)
     {
         /* Monitoring - Check() true = healthy; persistent violation (2s)
            or mission change -> SDC open */
+        /* note: no debounce here right now, manual_run_ok is not used,
+           a single bad sample opens the SDC */
         if (Sensors_TankPressure1Valid() || Sensors_TankPressure2Valid() || SYS_GetSelectedMission() != MISSION_MANUAL)
         {
             SDC_Open();

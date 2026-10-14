@@ -1,6 +1,6 @@
 {
   // CMakePresets.json drives the generator, build folder and compile_commands
-  // on every platform — no per-machine kit or toolchain paths needed here.
+  // on every platform - no per-machine kit or toolchain paths needed here.
   // The toolchain itself is auto-detected by CMakeLists.txt.
   "cmake.useCMakePresets": "always",
   "cmake.configureOnOpen": true,

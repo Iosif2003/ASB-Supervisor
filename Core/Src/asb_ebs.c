@@ -1,6 +1,10 @@
 /* =========================================================
  * ASB EBS Control - Implementation
  * Aristurtle Formula Student | 2026
+ *
+ * Drives the two EBS solenoid valves (EBS_Valve1_GND / EBS_Valve2_GND).
+ * Remember the polarity: RESET (low) = brake, SET (high) = release.
+ * The bools below mirror what we commanded, true = that circuit brakes.
  * ========================================================= */
 
 #include "asb_ebs.h"
@@ -10,7 +14,7 @@
 #include "main.h"
 #include <stdbool.h>
 
-/* Private Variables */
+/* Private Variables - start as braking, MX_GPIO_Init also sets both pins low */
 static bool ebs_is_activated  = true;
 static bool ebs_system1_state = true;
 static bool ebs_system2_state = true;
@@ -22,13 +26,14 @@ bool EBS_IsActivated(void)   { return ebs_is_activated;  }
 bool EBS_System1_State(void) { return ebs_system1_state; }
 bool EBS_System2_State(void) { return ebs_system2_state; }
 
-/* GET EBS STATE */
-EBS_State_t EBS_State(void) 
+/* GET EBS STATE - recomputed on every call, order matters:
+   no tank pressure -> unavailable wins over everything else */
+EBS_State_t EBS_State(void)
 {
     if(!Sensors_TankPressureValid())            { EBS_state = EBS_UNAVAILABLE; }
 
     else if(ebs_is_activated || !SYS_GetTSMS()) { EBS_state = EBS_TRIGGERED; }  /* activated or SDC open */
-    
+
     else { EBS_state = EBS_ARMED; }
 
     return EBS_state;
@@ -51,6 +56,7 @@ DV_EbsStatus_t EBS_DvStatus(void)
     return DV_EBS_INITIAL_CHECKUP_PASSED;
 }
 
+/* same logic as above, only the numbers of the redundancy enum differ */
 DV_REbsStatus_t EBS_DvRedundancyStatus(void)
 {
     if (IC_GetState() < IC_NOTIFY_APU)                  { return DV_R_EBS_DEACTIVATED; }
@@ -61,7 +67,7 @@ DV_REbsStatus_t EBS_DvRedundancyStatus(void)
 }
 
 
-/* EBS Initialization */
+/* EBS Initialization - both valves off = both circuits braking */
 void EBS_Init(void)
 {
     EBS_state = EBS_UNAVAILABLE;
@@ -73,7 +79,7 @@ void EBS_Init(void)
     HAL_GPIO_WritePin(EBS_Valve2_GND_GPIO_Port, EBS_Valve2_GND_Pin, GPIO_PIN_RESET);
 }
 
-/* EBS Activation */
+/* EBS Activation - emergency brake, both circuits */
 void EBS_Activate(void)
 {
     EBS_state = EBS_TRIGGERED;
@@ -85,7 +91,7 @@ void EBS_Activate(void)
     HAL_GPIO_WritePin(EBS_Valve2_GND_GPIO_Port, EBS_Valve2_GND_Pin, GPIO_PIN_RESET);
 }
 
-/* EBS Release All */
+/* EBS Release All - power both valves, cylinders vented */
 void EBS_Release_All(void)
 {
     ebs_system1_state = false;
@@ -95,6 +101,9 @@ void EBS_Release_All(void)
     HAL_GPIO_WritePin(EBS_Valve1_GND_GPIO_Port, EBS_Valve1_GND_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(EBS_Valve2_GND_GPIO_Port, EBS_Valve2_GND_Pin, GPIO_PIN_SET);
 }
+
+/* The single system functions are used by the initial check to test each
+   circuit on its own. ebs_is_activated only goes false when BOTH are released. */
 
 /* EBS Release System 1 */
 void EBS_Release_System1(void)
