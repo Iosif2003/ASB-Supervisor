@@ -14,6 +14,8 @@ void CAN_App_Init(void);
 /* TX Tasks */
 void CAN_SendAsbStatus(void);
 void CAN_SendDatalogger(void);
+void CAN_SendHydraulicPressures(void);
+void CAN_SendTankPressures(void);
 
 /* RX Processing (called from HAL_CAN_RxFifo0MsgPendingCallback) */
 void CAN_ProcessRxMessage(void);
@@ -37,6 +39,7 @@ uint8_t CAN_GetRESToggle(void);          /* K2 latching switch (Go-signal) */
 uint8_t CAN_GetRESButton(void);          /* K3 button (Go-signal) */
 uint8_t CAN_GetRESSignalStrength(void);  /* radio quality 0-100 % */
 bool    CAN_GetRESEmergency(void);       /* true = RES E-Stop asserted */
+uint8_t CAN_GetRESErrorRegister(void);   /* CANopen EMCY 0x091 byte 2, 0 = healthy, latched */
 
 /* RX Getters - RES Init (NMT sent by APU, monitored by ASB) */
 uint8_t CAN_GetRESInitRequestedState(void);
@@ -45,6 +48,7 @@ uint8_t CAN_GetRESInitAddressedNode(void);
 /* Communication Alive Checks */
 bool CAN_IsAPUAlive(void);
 bool CAN_IsBrakePressureAlive(void);
+bool CAN_IsBrakeOutOfRange(void);
 bool CAN_IsRESAlive(void);
 
 #endif /* ASB_CAN_H */

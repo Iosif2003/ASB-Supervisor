@@ -75,6 +75,7 @@ uint16_t adc_buffer[ASB_ADC_BUFFER_SIZE];
 // ISRs
 static volatile bool tick_10ms  = false;
 static volatile bool tick_20ms  = false;
+static volatile bool tick_50ms  = false;
 static volatile bool tick_100ms = false;
 static bool monitoring = false;   /* armed at AS_Ready; if a check breaks -> EBS + SDC open */
 
@@ -116,7 +117,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+   HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -157,8 +158,9 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);   /* ADC trigger          */
   HAL_TIM_Base_Start_IT(&htim4);   /* Monitoring interval   */
   HAL_TIM_Base_Start_IT(&htim5);   /* CAN ASB TX            */
+  HAL_TIM_Base_Start_IT(&htim6);   /* CAN Pressures TX      */
   HAL_TIM_Base_Start_IT(&htim7);   /* CAN Datalogger TX     */
-  WDG_Start();                     /* Watchdog PWM - sets wdg_is_running so the self-healing WDG_Reset() covers boot-to-IC too */
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
   HAL_DAC_Start(&hdac, DAC_CHANNEL_1);       /* Service brake DAC */
   
   /* USER CODE END 2 */
@@ -167,7 +169,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
     if (tick_10ms)
     {
       tick_10ms = false;
@@ -177,10 +178,10 @@ int main(void)
         switch (CAN_GetASState())
           {
             case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_OFF_CHOICE:  /* AS_Off */
-            if (IC_GetState() < IC_SET_DIGPIN_HIGH) { SDC_Open(); }
+            if (IC_GetState() < IC_WAIT_SDC_CLOSE_FIRST_TIME) { SDC_Open(); }
             // keep SDC open until the initial check reaches the dig-pin-high step
             IC_Run();
-            monitoring = false;
+
 
             break;
 
@@ -189,7 +190,7 @@ int main(void)
             // park the service brake so the car cant roll if something goes wrong
             if (EBS_State() != EBS_ARMED) { SDC_Open(); }
             // EBS has to be armed at this point, otherwise keep the SDC open
-            monitoring = true;
+
 
             break;
 
@@ -213,7 +214,7 @@ int main(void)
             case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_EMERGENCY_CHOICE:  /* AS_Emergency */
             EBS_Activate();
             SDC_Open();
-            monitoring = false;
+
 
             break;
 
@@ -223,7 +224,7 @@ int main(void)
           }
 
           /* continuous monitoring - failed check while armed -> EBS + open SDC */
-          if (monitoring && !Monitor_Run()) { EBS_Activate(); SDC_Open(); }
+          if (!Monitor_Run()) { EBS_Activate(); SDC_Open(); }
         }
       else if (SYS_GetSelectedMission() == MISSION_MANUAL)
       {
@@ -231,12 +232,15 @@ int main(void)
       }
 
 
-      WDG_Reset();
-    }     
-    
+      if(IC_GetState() != IC_STOP_WATCHDOG  && IC_GetState() != IC_WAIT_SDC_OPEN_SECOND_TIME ) { WDG_Reset(); }
+
+    }
+
     if (tick_20ms)  { tick_20ms  = false; CAN_SendAsbStatus(); }
 
-    if (tick_100ms) { tick_100ms = false;  CAN_SendDatalogger(); }
+    if (tick_50ms)  { tick_50ms  = false; CAN_SendHydraulicPressures(); CAN_SendTankPressures(); }
+
+    if (tick_100ms) { tick_100ms = false; CAN_SendDatalogger(); }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -645,9 +649,9 @@ static void MX_TIM6_Init(void)
 
   /* USER CODE END TIM6_Init 1 */
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 64934;
+  htim6.Init.Prescaler = 39999;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 6159;
+  htim6.Init.Period = 99;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -794,6 +798,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if      (htim->Instance == TIM4) { tick_10ms  = true; }   /* 10 ms  */
     else if (htim->Instance == TIM5) { tick_20ms  = true; }   /* 20 ms  */
+    else if (htim->Instance == TIM6) { tick_50ms  = true; }   /* 50 ms  */
     else if (htim->Instance == TIM7) { tick_100ms = true; }   /* 100 ms */
 }
 

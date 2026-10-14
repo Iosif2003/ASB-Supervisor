@@ -10,6 +10,7 @@
 #include "asb_ebs.h"
 #include "asb_monitoring.h"
 #include "asb_config.h"
+#include "asb_sensors.h"
 
 /* Private Variables */
 static bool sdc_is_closed     = false;
@@ -59,55 +60,12 @@ void SDC_Open(void)
 void WDG_Reset(void)
 {
     __HAL_TIM_SET_COUNTER(&htim3, 0);
-
-    /* OPM trap: one missed 40ms deadline (e.g. debugger halt) fires the
-       update event and hardware clears CEN - a counter write alone can
-       never restart the pulse train. Being called here proves the code is
-       alive, so re-arm. Guarded: during WDG_Stop() the timer must stay off. */
-    if (wdg_is_running && ((htim3.Instance->CR1 & TIM_CR1_CEN) == 0U))
-    {
         __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_UPDATE);
         __HAL_TIM_ENABLE(&htim3);
-    }
+
 }
 
-/* Watchdog Stop */
-void WDG_Stop(void)
-{
-    HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);
 
-    /* With the channel off the open-drain pin is released and the external
-       pull-up holds the line steadily HIGH - the watchdog circuit can read
-       that as "alive" and never drop the AS relay. Take the pin over as a
-       plain GPIO and drive it LOW so the line is unambiguously dead. */
-    GPIO_InitTypeDef gpio = {0};
-    gpio.Pin   = WatchdogPWM_Pin;
-    gpio.Mode  = GPIO_MODE_OUTPUT_OD;
-    gpio.Pull  = GPIO_NOPULL;
-    gpio.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(WatchdogPWM_GPIO_Port, &gpio);
-    HAL_GPIO_WritePin(WatchdogPWM_GPIO_Port, WatchdogPWM_Pin, GPIO_PIN_RESET);
-
-    wdg_is_running = false;
-}
-
-/* Watchdog Start */
-void WDG_Start(void)
-{
-    /* Hand the pin back to TIM3 CH4 */
-    GPIO_InitTypeDef gpio = {0};
-    gpio.Pin       = WatchdogPWM_Pin;
-    gpio.Mode      = GPIO_MODE_AF_OD;
-    gpio.Pull      = GPIO_NOPULL;
-    gpio.Speed     = GPIO_SPEED_FREQ_LOW;
-    gpio.Alternate = GPIO_AF2_TIM3;
-    HAL_GPIO_Init(WatchdogPWM_GPIO_Port, &gpio);
-
-    __HAL_TIM_SET_COUNTER(&htim3, 0);
-    __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_UPDATE);   /* stale UIF from a missed deadline */
-    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
-    wdg_is_running = true;
-}
 
 /* GPIO */
 
@@ -168,8 +126,8 @@ void Manual_Run(void)
     if (!manual_checked)
     {
         /* ASMS must be off and the pneumatic system depressurized
-           (EBS unavailable) - no autonomous brake actuation possible */
-        if (SYS_GetASMS() /*|| EBS_State() != EBS_UNAVAILABLE*/)
+            no autonomous brake actuation possible */
+        if (SYS_GetASMS() || Sensors_TankPressure1Valid() || Sensors_TankPressure2Valid())
         {
             SDC_Open();
             return;
@@ -189,8 +147,7 @@ void Manual_Run(void)
     {
         /* Monitoring - Check() true = healthy; persistent violation (2s)
            or mission change -> SDC open */
-        if (!Check(&manual_run_ok, (!SYS_GetASMS() /*&& EBS_State() == EBS_UNAVAILABLE*/))
-        || SYS_GetSelectedMission() != MISSION_MANUAL)
+        if (Sensors_TankPressure1Valid() || Sensors_TankPressure2Valid() || SYS_GetSelectedMission() != MISSION_MANUAL)
         {
             SDC_Open();
             manual_checked = false;

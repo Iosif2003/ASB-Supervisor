@@ -96,25 +96,21 @@ void IC_Run(void)
 
          case IC_WAIT_RES:
             /* ASRelay_In == 1 means SDC before ASB is closed (RES closed) */
-            if (SYS_GetASRelayIn()) { ic_state = IC_SET_DIGPIN_HIGH;/*IC_WAIT_PRESSURES;*/ }
+            if (SYS_GetASRelayIn()) { ic_state = IC_WAIT_PRESSURES; }
             break;
 
         case IC_WAIT_PRESSURES:
             /* Tank pressure valid AND brake pressure confirms engaged */
-        	if (Sensors_TankPressureValid() && Sensors_BrakePressureEngaged()) { ic_state = IC_SET_DIGPIN_HIGH;}
+        	if (Sensors_TankPressure1Valid() && Sensors_TankPressure2Valid() && Sensors_BrakePressureEngaged())
+            { ic_state = IC_WAIT_SDC_CLOSE_FIRST_TIME;}
             break;
           
-        case IC_SET_DIGPIN_HIGH: /*TODO: deep check shutdown logic*/
+        case IC_WAIT_SDC_CLOSE_FIRST_TIME: //set as_relay_signaL HIGH
             SDC_Close();
-            ic_state = IC_WAIT_SDC_CLOSE_FIRST_TIME;
+        if (SYS_GetASRelayOut()) { ic_state = /*IC_WAIT_TSMS;*/ IC_STOP_WATCHDOG; }
             break;
 
-        case IC_WAIT_SDC_CLOSE_FIRST_TIME:
-            if (SYS_GetASRelayOut()) { ic_state = IC_WAIT_TSMS; /*IC_STOP_WATCHDOG;*/ }
-            break;
-
-        /*case IC_STOP_WATCHDOG:
-            WDG_Stop();
+        case IC_STOP_WATCHDOG: //stop watchdog to test SDC open/close
             ic_state = IC_WAIT_SDC_OPEN_SECOND_TIME;
             break;
 
@@ -123,25 +119,26 @@ void IC_Run(void)
             break;
 
         case IC_START_WATCHDOG:
-            WDG_Start();
             ic_state = IC_WAIT_SDC_CLOSE_SECOND_TIME;
             break;
 
         case IC_WAIT_SDC_CLOSE_SECOND_TIME:
+            /* re-command every tick, like IC_WAIT_SDC_CLOSE_FIRST_TIME: if the
+               always-on monitoring opened the SDC during the watchdog test
+               window, the close must be re-issued or the IC strands here */
+            //SDC_Close();
             if (SYS_GetASRelayOut()) { ic_state = IC_WAIT_TSMS; }
-            break;*/
+            break;
 
         case IC_WAIT_TSMS:
             /* TSMS high = last part of the SDC closed */
-            if (SYS_GetTSMS()) { ic_state = IC_RELEASE_EBS;  }
+            if (SYS_GetTSMS()) { ic_state = IC_RELEASE_SYSTEM1;  }
             break;
 
-        case IC_RELEASE_EBS:
-            if (EBS_IsActivated()) {
-            	EBS_Release_All();
-            	ServiceBrake_Disengage();
-            }
-            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureReleased())
+            
+        case IC_RELEASE_SYSTEM1:
+            if (EBS_System1_State()) { EBS_Release_System1(); }
+            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureForOneValve())
             {
                 ic_state = IC_ENGAGE_SYSTEM1;
             }
@@ -151,64 +148,58 @@ void IC_Run(void)
             if (!EBS_System1_State()) { EBS_Activate_System1(); }
             if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureEngaged())
             {
-                ic_state = IC_RELEASE_SYSTEM1;
-            }
-            break;   
-            
-        case IC_RELEASE_SYSTEM1:
-            if (EBS_System1_State()) { EBS_Release_System1(); }
-            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureReleased())
-            {
-                ic_state = IC_ENGAGE_SYSTEM2;
-            }
-            break;
-
-        case IC_ENGAGE_SYSTEM2:
-            if (!EBS_System2_State()) { EBS_Activate_System2(); }
-            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureEngaged())
-            {
                 ic_state = IC_RELEASE_SYSTEM2;
             }
             break;  
         
         case IC_RELEASE_SYSTEM2:
             if (EBS_System2_State()) { EBS_Release_System2(); }
-            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureReleased())
+            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureForOneValve())
             { 
-                ic_state = IC_ENGAGE_SERVICE_BRAKE;
+                ic_state = IC_ENGAGE_SYSTEM2;
             }
             break;  
+
+        case IC_ENGAGE_SYSTEM2:
+            if (!EBS_System2_State()) { EBS_Activate_System2(); }
+            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureEngaged())
+            {
+                ic_state = IC_RELEASE_SYSTEM1_SECOND_TIME;
+            }
+            break; 
+        
+        case IC_RELEASE_SYSTEM1_SECOND_TIME:
+            if (EBS_System1_State()) { EBS_Release_System1(); }
+            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureForOneValve())
+            {
+                ic_state = IC_ENGAGE_SERVICE_BRAKE;
+            }
+            break;
         
         case IC_ENGAGE_SERVICE_BRAKE:
             if(ServiceBrake_State() != SERVICE_BRAKE_ENGAGED) { ServiceBrake_Engage(); }
             if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureEngaged())
             {
-                ic_state = IC_RELEASE_SERVICE_BRAKE;
+                ic_state = IC_RELEASE_SYSTEM2_SECOND_TIME;
             }
             break;
 
-        case IC_RELEASE_SERVICE_BRAKE:
-            if(ServiceBrake_State() != SERVICE_BRAKE_DISENGAGED) { ServiceBrake_Disengage(); }
-            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureReleased())
+         case IC_RELEASE_SYSTEM2_SECOND_TIME:
+            if (EBS_System2_State()) { EBS_Release_System2(); }
+            if (IC_TimerElapsed(ASB_IC_VALVE_SETTLE_MS) && Sensors_BrakePressureForOneValve())
             {
-                ic_state = IC_PARK_SERVICE_BRAKE;
+                ic_state = IC_NOTIFY_APU;
             }
             break;
-    
-        case IC_PARK_SERVICE_BRAKE:
-            ServiceBrake_Park();
-            ic_state = IC_NOTIFY_APU;
-            break;      
 
         case IC_NOTIFY_APU:
             /* Signal APU via CAN (initial_checked = true when ic_state == IC_NOTIFY_APU).
             Wait for APU to transition to AS_Ready (state 2).
             timeout -> fail */
             if (CAN_GetASState() == 2U)    { ic_state = IC_COMPLETE; }
-            //else if (IC_TimerElapsed(ASB_IC_APU_READY_TIMEOUT_MS))    { IC_Fail(); }
+            else if (IC_TimerElapsed(ASB_IC_APU_READY_TIMEOUT_MS))    { IC_Fail(); }
             break;
 
-        case IC_ENABLE_OPM:  /* TIM3 is in one-pulse mode from MX_TIM3_Init - nothing to enable */
         case IC_COMPLETE:    /* terminal state */
             break;
         }

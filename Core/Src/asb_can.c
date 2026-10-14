@@ -1,3 +1,4 @@
+
 /* =========================================================
  * ASB CAN - Implementation
  * Aristurtle Formula Student | 2026
@@ -19,15 +20,23 @@
 /* External handles from main.c */
 extern CAN_HandleTypeDef hcan1;
 
+/* CANopen EMCY from the RES: 0x080 + NodeID (0x11). Deliberately NOT in the
+   DBC - handled as a raw frame (bytes 0-1 error code, byte 2 error register).
+   If the message is ever added to the DBC, switch to the generated unpack. */
+#define RES_EMCY_FRAME_ID  0x091U
+
 /* Private RX/TX structs */
 static struct can_mcu_dv_system_status_t  can_apu_state;
 static struct can_mcu_vcu_bools_t         can_vcu_bools;
 static struct can_mcu_smu_brake_t         can_smu_brake;
 static struct can_mcu_asb_t               can_tx_asb;
 static struct can_mcu_asb_datalogger_t    can_tx_datalogger;
+static struct can_mcu_asb_hydraulic_pressures_t can_tx_hydraulic;
+static struct can_mcu_asb_tank_pressures_t      can_tx_tank;
 static struct can_mcu_res_status_t 		  can_res;
-static struct can_mcu_vcu_brake_t 		  can_vcu_brake; 
-static struct can_mcu_apu_set_finished_t  can_apu_set_finished;   
+static struct can_mcu_vcu_brake_t 		  can_vcu_brake;
+static struct can_mcu_apu_set_finished_t  can_apu_set_finished;
+static struct can_mcu_apu_res_init_t      can_apu_res_init;
 
 
 /* Private CAN buffers */
@@ -39,6 +48,7 @@ static uint32_t tx_mailbox;
 /* Decoded RX values */
 static float brake_pressure_front = 0.0f;
 static float brake_pressure_rear  = 0.0f;
+static uint8_t res_error_register = 0U;   /* byte 2 of RES EMCY, latched until reboot */
 
 /* APU alive tracking */
 static uint32_t apu_last_rx_tick = 0U;
@@ -54,6 +64,7 @@ void CAN_App_Init(void)
     brake_front_last_rx_tick = HAL_GetTick();
     brake_rear_last_rx_tick  = HAL_GetTick();
     res_last_rx_tick         = HAL_GetTick();
+    res_error_register       = 0U;
 
     CAN_FilterTypeDef fc;
 
@@ -70,6 +81,8 @@ void CAN_App_Init(void)
         0x191,   /* RES_STATUS         */
         0x78,   /* VCU_BRAKE          */
         0x2d,   /* APU_SET_FINISHED   */
+        0x091,  /* RES EMCY (CANopen, raw - not in DBC) */
+        0x000,  /* APU_RES_INIT (CANopen NMT from APU to the RES) */
     };
     const int count = sizeof(ids) / sizeof(ids[0]);
     int bank = 0;
@@ -109,8 +122,11 @@ void CAN_App_Init(void)
     memset(&can_res, 0, sizeof(can_res));
     memset(&can_tx_asb, 0, sizeof(can_tx_asb));
     memset(&can_tx_datalogger, 0, sizeof(can_tx_datalogger));
+    memset(&can_tx_hydraulic, 0, sizeof(can_tx_hydraulic));
+    memset(&can_tx_tank, 0, sizeof(can_tx_tank));
     memset(&can_vcu_brake, 0, sizeof(can_vcu_brake));
     memset(&can_apu_set_finished, 0, sizeof(can_apu_set_finished));
+    memset(&can_apu_res_init, 0, sizeof(can_apu_res_init));
     memset(rx_data, 0, sizeof(rx_data));
     memset(tx_data, 0, sizeof(tx_data));
 }
@@ -152,11 +168,12 @@ void CAN_SendAsbStatus(void)
 {
     can_tx_asb.asms_state             = SYS_GetASMS();
     can_tx_asb.tsms_out               = SYS_GetTSMS();   /* raw: 1 = closed, same as main */
-    can_tx_asb.r_ebs_status           = EBS_State();
-    can_tx_asb.ebs_status             = EBS_State();
-    can_tx_asb.sdc_ok                 = SDC_IsClosed();
+    /* DV spec 2026 values - forwarded by the APU into DV_System_Status */
+    can_tx_asb.r_ebs_status           = EBS_DvRedundancyStatus();
+    can_tx_asb.ebs_status             = EBS_DvStatus();
+    can_tx_asb.sdc_ok                 = SYS_GetASRelayOut();
     can_tx_asb.initial_check_step     = (uint8_t)IC_GetState();
-    if(IC_GetState()>= IC_NOTIFY_APU) { can_tx_asb.initial_checked = true; }
+    if(IC_GetState()>= IC_NOTIFY_APU) { can_tx_asb.initial_checked = true; IC_IsComplete(); }
     else { can_tx_asb.initial_checked = false; }
     // initial_checked only goes true from IC_NOTIFY_APU onwards (check done, APU told)
     can_tx_asb.steering_state          = SYS_GetInterlockSteering();
@@ -165,20 +182,8 @@ void CAN_SendAsbStatus(void)
     CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, tx_data);
 }
 
-/* DBC: the ASB_Datalogger pressure signals are 8-bit, scale 1 -> raw bar, 0..255 */
-static uint8_t pressure_to_u8(float bar)
-{
-    if (bar <= 0.0f)   { return 0U; }
-    if (bar >= 255.0f) { return 255U; }
-    return (uint8_t)bar;
-}
-
 void CAN_SendDatalogger(void)
 {
-    can_tx_datalogger.brake_pressure_front                      = pressure_to_u8(brake_pressure_front);
-    can_tx_datalogger.brake_pressure_rear                       = pressure_to_u8(brake_pressure_rear);
-    can_tx_datalogger.ebs_tank_pressure_sensor                  = pressure_to_u8(Sensors_GetTankPressure1());
-    can_tx_datalogger.ebs_redundancy_tank_pressure_sensor       = pressure_to_u8(Sensors_GetTankPressure2());
     can_tx_datalogger.eb_sstate_activated                       = (EBS_State() == EBS_TRIGGERED) ? 1U : 0U;
     can_tx_datalogger.eb_sstate_armed                           = (EBS_State() == EBS_ARMED) ? 1U : 0U;
     can_tx_datalogger.eb_sstate_unavailable                     = (EBS_State() == EBS_UNAVAILABLE) ? 1U : 0U; 
@@ -193,6 +198,26 @@ void CAN_SendDatalogger(void)
 
     can_mcu_asb_datalogger_pack(tx_data, &can_tx_datalogger, sizeof(tx_data));
     CAN_SendStdMessage(CAN_MCU_ASB_DATALOGGER_FRAME_ID, CAN_MCU_ASB_DATALOGGER_LENGTH, tx_data);
+}
+
+
+void CAN_SendHydraulicPressures(void)
+{
+    can_tx_hydraulic.brake_pressure_front =  can_mcu_asb_hydraulic_pressures_brake_pressure_front_encode(brake_pressure_front);
+    can_tx_hydraulic.brake_pressure_rear  =  can_mcu_asb_hydraulic_pressures_brake_pressure_rear_encode(brake_pressure_rear);
+
+    can_mcu_asb_hydraulic_pressures_pack(tx_data, &can_tx_hydraulic, sizeof(tx_data));
+    CAN_SendStdMessage(CAN_MCU_ASB_HYDRAULIC_PRESSURES_FRAME_ID, CAN_MCU_ASB_HYDRAULIC_PRESSURES_LENGTH, tx_data);
+}
+
+void CAN_SendTankPressures(void)
+{
+
+    can_tx_tank.ebs_tank_pressure_sensor            =   can_mcu_asb_tank_pressures_ebs_tank_pressure_sensor_encode(Sensors_GetTankPressure1());
+	can_tx_tank.ebs_redundancy_tank_pressure_sensor =	can_mcu_asb_tank_pressures_ebs_redundancy_tank_pressure_sensor_encode(Sensors_GetTankPressure2());
+
+	can_mcu_asb_tank_pressures_pack(tx_data, &can_tx_tank, sizeof(tx_data));
+    CAN_SendStdMessage(CAN_MCU_ASB_TANK_PRESSURES_FRAME_ID, CAN_MCU_ASB_TANK_PRESSURES_LENGTH, tx_data);
 }
 
 void CAN_ProcessRxMessage(void)
@@ -248,6 +273,21 @@ void CAN_ProcessRxMessage(void)
             can_mcu_apu_set_finished_unpack(&can_apu_set_finished, rx_data, msg_header_rx.DLC);
             break;
 
+        case CAN_MCU_APU_RES_INIT_FRAME_ID:
+            /* CANopen NMT (0x000) that the APU sends to start the RES */
+            can_mcu_apu_res_init_unpack(&can_apu_res_init, rx_data, msg_header_rx.DLC);
+            break;
+
+        case RES_EMCY_FRAME_ID:
+            /* bytes 0-1 = error code, byte 2 = error register (0 = healthy).
+               Latched: a RES that reported an internal fault is not trusted
+               again without a power cycle, even if it later sends error-reset. */
+            if ((msg_header_rx.DLC >= 3U) && (rx_data[2] != 0U))
+            {
+                res_error_register = rx_data[2];
+            }
+            break;
+
         default:
             break;
     }
@@ -277,6 +317,14 @@ uint8_t CAN_GetVCUMode(void)
     return can_vcu_bools.mode;
 }
 
+int CAN_GetServoCommand(void)
+{
+    /* No servo/brake command signal exists in the current DBC. 0 = no
+       actuation expected, keeps service_brake_ok() passive until the
+       service brake monitor rewrite brings a real source. */
+    return 0;
+}
+
 /* RX Getters - DASH */
 
 float CAN_GetBrakePressureFront(void)
@@ -291,23 +339,46 @@ float CAN_GetBrakePressureRear(void)
 
 /* RX Getters - RES */
 
+uint8_t CAN_GetRESStop(void)   { return can_res.stop;   }
+uint8_t CAN_GetRESToggle(void) { return can_res.toggle; }
+uint8_t CAN_GetRESButton(void) { return can_res.button; }
+
+bool CAN_GetRESEmergency(void)
+{
+    /* stop bit: 0 = emergency active. can_res starts zeroed, so before the
+       first RES frame this reports emergency - deliberate fail-safe. */
+    return (can_res.stop == 0U);
+}
+
 uint8_t CAN_GetRESSignalStrength(void)
 {
     return can_res.signal_strength;
 }
 
+uint8_t CAN_GetRESErrorRegister(void)
+{
+    return res_error_register;
+}
+
+/* RX Getters - RES Init (NMT sent by APU, monitored by ASB) */
+
+uint8_t CAN_GetRESInitRequestedState(void) { return can_apu_res_init.requested_state; }
+uint8_t CAN_GetRESInitAddressedNode(void)  { return can_apu_res_init.addresed_node;   }
+
 /* APU Alive */
 
 bool CAN_IsAPUAlive(void)
 {
-    return (HAL_GetTick() - apu_last_rx_tick < 480U);
+    /* ASF Sheet 9: APU sends @100ms, timeout 300ms (tolerates 2 lost messages) */
+    return (HAL_GetTick() - apu_last_rx_tick < 300U);
 }
 
 /* RES Alive */
 
 bool CAN_IsRESAlive(void)
 {
-    return (HAL_GetTick() - res_last_rx_tick < 100U);
+    /* ASF Sheet 8: RES sends @30ms, timeout 90ms */
+    return (HAL_GetTick() - res_last_rx_tick < 90U);
 }
 
 /* Brake Pressure Alive */
@@ -318,5 +389,10 @@ bool CAN_IsBrakePressureAlive(void)
     uint32_t now = HAL_GetTick();
     return (now - brake_front_last_rx_tick < 100U) &&
            (now - brake_rear_last_rx_tick  < 100U);
+}
+
+bool CAN_IsBrakeOutOfRange(void){
+	return can_smu_brake.brake_out_of_range;
+
 }
 
