@@ -38,14 +38,14 @@ extern "C" {
 /* USER CODE BEGIN ET */
 typedef enum {
   Servo_Disengaged = 1,
-  Servo_Engaged,
-  Servo_Available
+  Servo_Engaged    = 2,
+  Servo_Available  = 3
 } ServoEnum;
 
 typedef enum {
   EBS_Unavailable = 1,
-  EBS_Armed,
-  EBS_Triggered
+  EBS_Armed       = 2,
+  EBS_Triggered   = 3
 } EBSEnum;
 
 /* USER CODE END ET */
@@ -72,10 +72,10 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define ASMS_Pin GPIO_PIN_13
 #define ASMS_GPIO_Port GPIOC
-#define AS_Relay_OUT_Pin GPIO_PIN_1
-#define AS_Relay_OUT_GPIO_Port GPIOC
-#define AS_Relay_IN_Pin GPIO_PIN_2
-#define AS_Relay_IN_GPIO_Port GPIOC
+#define AS_Relay_Out_Pin GPIO_PIN_1
+#define AS_Relay_Out_GPIO_Port GPIOC
+#define AS_Relay_In_Pin GPIO_PIN_2
+#define AS_Relay_In_GPIO_Port GPIOC
 #define Interlock_Steering_Pin GPIO_PIN_3
 #define Interlock_Steering_GPIO_Port GPIOC
 #define Interlock_Proportional_Pin GPIO_PIN_0
@@ -86,18 +86,14 @@ void Error_Handler(void);
 #define Interlock_Valve1_GPIO_Port GPIOA
 #define Proportional_Signal_Pin GPIO_PIN_4
 #define Proportional_Signal_GPIO_Port GPIOA
-#define EBS_Activate1_Pin GPIO_PIN_5
-#define EBS_Activate1_GPIO_Port GPIOA
-#define EBS_Activate2_Pin GPIO_PIN_6
-#define EBS_Activate2_GPIO_Port GPIOA
-#define TankPressure1_Pin GPIO_PIN_7
-#define TankPressure1_GPIO_Port GPIOA
-#define TankPressure2_Pin GPIO_PIN_4
-#define TankPressure2_GPIO_Port GPIOC
-#define PressureActuator1_Pin GPIO_PIN_5
-#define PressureActuator1_GPIO_Port GPIOC
-#define PressureActuator2_Pin GPIO_PIN_0
-#define PressureActuator2_GPIO_Port GPIOB
+#define EBS_Valve1_GND_Pin GPIO_PIN_5
+#define EBS_Valve1_GND_GPIO_Port GPIOA
+#define EBS_Valve2_GND_Pin GPIO_PIN_6
+#define EBS_Valve2_GND_GPIO_Port GPIOA
+#define TankPressure1_Pin GPIO_PIN_5
+#define TankPressure1_GPIO_Port GPIOC
+#define TankPressure2_Pin GPIO_PIN_0
+#define TankPressure2_GPIO_Port GPIOB
 #define UserLed_Pin GPIO_PIN_12
 #define UserLed_GPIO_Port GPIOB
 #define AS_Relay_Signal_Pin GPIO_PIN_13
@@ -110,9 +106,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 
 //	ADC	//
-// 4 channels: TankPressure1 (IN7), TankPressure2 (IN14),
-//             PressureActuator1 (IN15), PressureActuator2 (IN8)
-#define ADC_BUFFER_SIZE 4
+#define ADC_BUFFER_SIZE 2
 
 // AS MODES	//
 
@@ -127,26 +121,6 @@ void Error_Handler(void);
 #define AS_Driving         3 //(3u)
 #define AS_Finished        4 //(4u)
 #define AS_Emergency       5 //(5u)
-
-// ---- Aliases mapping legacy names used in main.c to the new pinout ----
-#define ASMS_Out_Pin                ASMS_Pin
-#define ASMS_Out_GPIO_Port          ASMS_GPIO_Port
-#define TSMS_Out_NOT_Pin            TSMS_Pin
-#define TSMS_Out_NOT_GPIO_Port      TSMS_GPIO_Port
-#define ASRelay_In_Pin              AS_Relay_IN_Pin
-#define ASRelay_In_GPIO_Port        AS_Relay_IN_GPIO_Port
-#define ASRelay_Out_Pin             AS_Relay_OUT_Pin
-#define ASRelay_Out_GPIO_Port       AS_Relay_OUT_GPIO_Port
-#define ASRelay_State_Pin           AS_Relay_Signal_Pin
-#define ASRelay_State_GPIO_Port     AS_Relay_Signal_GPIO_Port
-#define Valve1_GND_ST_Pin           EBS_Activate1_Pin
-#define Valve1_GND_ST_GPIO_Port     EBS_Activate1_GPIO_Port
-#define Valve2_GND_ST_Pin           EBS_Activate2_Pin
-#define Valve2_GND_ST_GPIO_Port     EBS_Activate2_GPIO_Port
-#define Interlock_PV_Pin            Interlock_Proportional_Pin
-#define Interlock_PV_GPIO_Port      Interlock_Proportional_GPIO_Port
-#define Interlock_valve2_Pin        Interlock_Valve2_Pin
-#define Interlock_valve2_GPIO_Port  Interlock_Valve2_GPIO_Port
 
 /* USER CODE END Private defines */
 

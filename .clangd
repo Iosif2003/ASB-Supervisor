@@ -1,0 +1,10 @@
+CompileFlags:
+  CompilationDatabase: build_cmake
+  Add:
+    - --target=arm-none-eabi
+    - -ferror-limit=0
+  Remove:
+    - -mfpu=*
+    - -mfloat-abi=*
+Diagnostics:
+  UnusedIncludes: None

@@ -1,4 +1,4 @@
-  /* USER CODE BEGIN Header */
+/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
@@ -21,10 +21,19 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdbool.h>
-#include <stdint.h>
+
 #include "can_mcu.h"
 #include "stm32f4xx_hal.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include "asb_config.h"
+#include "asb_can.h"
+#include "asb_ebs.h"
+#include "asb_system.h"
+#include "asb_sensors.h"
+#include "asb_service_brake.h"
+#include "asb_initial_check.h"
+#include "asb_monitoring.h"
 
 /* USER CODE END Includes */
 
@@ -36,8 +45,6 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define Tank_Pressure_min 3.5	//bar
-#define Tank_Pressure_max 10
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -62,117 +69,15 @@ TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
 
-volatile int Initial_Check_Step;
-volatile int APU_Transition;
+//ADC buffer for tank pressure readings
+uint16_t adc_buffer[ASB_ADC_BUFFER_SIZE];
 
-//	Monitoring Variables	//
-
-volatile bool Monitoring, Monitor_All;
-int Manual_monitor_counter;
-bool Manual_monitor_check, Service_Brake = false, Watchdog_Check, Brake_Pressure_Check, Tank_Pressure_Check, Interlock_Valve1_Check, Interlock_Valve2_Check, APU_Communication_Check;
-int Watchdog_Check_error, Brake_Pressure_Check_errors, Tank_Pressure_Check_errors, Interlock_Valve1_Check_errors, Interlock_Valve2_Check_errors;
-int Brake_Pressure_Check_ms, Tank_Pressure_Check_ms, APU_Communication_Check_ms;
-float Brake_Pressure;
-uint16_t Value = 0;
-
-// Servo / service brake variables used by CAN payloads.
-int Servo_Command;
-ServoEnum Servo_Status;
-bool Service_Brake_Check, Servo_Interlock_Check;
-//	CAN Variables	//
-
-CAN_RxHeaderTypeDef msgHeaderRx;
-uint32_t txMailbox;
-uint8_t rxData[8] = {0};																								// Buffer for received data
-uint8_t txData[8] = {0};
-bool  Can_Error;
-
-//	CAN LIVE DIAGNOSTICS	//
-// Add all of these to Live Expressions. What each one tells us:
-//  Dbg_Can_TxRequested : frames handed to the peripheral (+50/s expected, one every 20 ms)
-//  Dbg_Can_TxOk        : frames actually ACKed on the bus. Healthy TX -> follows TxRequested.
-//  Dbg_Can_TxFail      : transmissions that completed with error (no ACK / bit error / arb lost)
-//  Dbg_Can_TxDropped   : frames dropped because all 3 mailboxes were still busy (should stay 0)
-//  Dbg_Can_RxCount     : frames received (proves the RX path)
-//  Dbg_Can_Tec         : HW Transmit Error Counter. 0 = healthy. >127 = error passive (TX failing)
-//  Dbg_Can_Rec         : HW Receive Error Counter. 0 = healthy.
-//  Dbg_Can_Lec         : Last Error Code: 0 none, 1 stuff, 2 form, 3 ACK(=nobody acks us),
-//                        4 bit recessive, 5 bit dominant, 6 CRC
-//  Dbg_Can_BusOff      : true = TEC exceeded 255, peripheral left the bus. AutoBusOff is
-//                        ENABLE so it keeps recovering and retrying by itself (expect this
-//                        to pulse true/false while the TX path is physically broken)
-//  Dbg_Can_LastHalError: HAL error bits of the most recent error event (0x1000 = TX_TERR0 etc.)
-//  Dbg_Can_LecAtFail   : LEC captured INSIDE the TX-error interrupt. (The 10 ms snapshot above
-//                        almost always shows Lec=0 because every successfully RECEIVED frame
-//                        clears ESR.LEC again within microseconds - this one catches it in time.)
-//                        This value names the failure:
-//                          3 = ACK error         -> our frame IS on the wire, readback works,
-//                                                   but no other node answers
-//                                                   => fault is BETWEEN transceiver and bus
-//                                                      (CANH/CANL wiring, connector, termination)
-//                          5 = bit dominant error-> the dominant bits we send never come back
-//                                                   on RXD => fault is BETWEEN PA12 and the
-//                                                   transceiver output (TXD trace/solder,
-//                                                   standby pin, dead driver stage)
-//  Dbg_Can_EsrAtFail   : full raw ESR register at that same instant (TEC = bits 23:16)
-volatile uint32_t Dbg_Can_TxRequested;
-volatile uint32_t Dbg_Can_TxOk;
-volatile uint32_t Dbg_Can_TxFail;
-volatile uint32_t Dbg_Can_TxDropped;
-volatile uint32_t Dbg_Can_RxCount;
-volatile uint32_t Dbg_Can_Tec;
-volatile uint32_t Dbg_Can_Rec;
-volatile uint32_t Dbg_Can_Lec;
-volatile bool Dbg_Can_BusOff;
-volatile bool Dbg_Can_ErrorPassive;
-volatile uint32_t Dbg_Can_LastHalError;
-volatile uint32_t Dbg_Can_LecAtFail;
-volatile uint32_t Dbg_Can_EsrAtFail;
-struct can_mcu_apu_state_mission_t can_mcu_apu_state_mission;
-struct can_mcu_vcu_servo_control_t can_mcu_vcu_servo_control;
-struct can_mcu_vcu_bools_t can_mcu_vcu_bools;
-struct can_mcu_dash_brake_t can_mcu_dash_brake;
-struct can_mcu_asb_t canTxStruct_asb;
-struct can_mcu_asb_datalogger_t canTxStruct_asb_datalogger;
-float brake_pressure_front;
-float brake_pressure_rear;
-
-bool Initial_Checked;
-bool Manual_Initial_Checked;
-
-// GPIO Variables	//
-			
-bool ASMS_Out, TSMS_Out_NOT, ASRelay_In, ASRelay_Out, Interlock_Valve1, Interlock_Valve2, Interlock_PV, Interlock_Steering;		// Digital INPUTS from ASB
-bool ASRelay_State, Valve1_GND, Valve2_GND;
-
-// EBS-Tank Variables	//
-
-float Tank_Pressure;
-EBSEnum EBS_Status;
-float ADC_Voltage_Value;
-float Voltage_Change;
-uint16_t adc_buffer[ADC_BUFFER_SIZE];	// 0- 4095 adc value
-uint16_t ADC_Value;
-
-float ADC_Voltage_Value_2;
-float Voltage_Change_2;
-uint16_t ADC_Value_2;
-float Tank_Pressure_2;
-
-// Pressure actuators (Measurement Specialties M3041-000005-500PG) //
-// 0.5–4.5 V ratiometric @ 5 V supply, 0–500 PSI (≈ 0–34.4738 bar)
-// Hardware: 5 V sensor output is fed through ≈ 3.3/5 divider into the ADC,
-// so V_sensor = (raw/4095) * 3.3 * 1.5 and P_bar = (V_sensor - 0.5) * 8.6184
-uint16_t ADC_Pressure_Actuator_1_Raw;
-uint16_t ADC_Pressure_Actuator_2_Raw;
-float    Pressure_Actuator_1;	//bar
-float    Pressure_Actuator_2;	//bar
-
-// Debug Mode (manual EBS override) //
-// When Debug_Mode is true, the EBS_Activate outputs follow Debug_EBS_Active
-// (0 = release, 1 = activated). Toggle through the debugger.
-volatile bool Debug_Mode;
-volatile bool Debug_EBS_Active;
+// ISRs
+static volatile bool tick_10ms  = false;
+static volatile bool tick_20ms  = false;
+static volatile bool tick_50ms  = false;
+static volatile bool tick_100ms = false;
+static bool monitoring = false;   /* armed at AS_Ready; if a check breaks -> EBS + SDC open */
 
 /* USER CODE END PV */
 
@@ -191,95 +96,10 @@ static void MX_TIM5_Init(void);
 static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 
-static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc, const uint8_t *data, uint32_t *mailbox);
-static void CAN_SendAsbStatusTask(void);
-//static void CAN_SendAsbDataloggerTask(void);
-int Selected_Mission();
-void Manual_Initial_Check();
-void Manual_Monitoring();
-bool Continuous_Monitoring();
-void As_Initial_Check();
-void Init_All();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-static HAL_StatusTypeDef CAN_SendStdMessage(uint32_t std_id, uint32_t dlc, const uint8_t *data, uint32_t *mailbox)
-{
-	CAN_TxHeaderTypeDef txHeader = {0};
-
-	txHeader.StdId = std_id;
-	txHeader.IDE = CAN_ID_STD;
-	txHeader.RTR = CAN_RTR_DATA;
-	txHeader.DLC = dlc;
-
-	// This runs inside a timer ISR, so it must never block. We must not spin on a
-	// HAL_GetTick() timeout either: SysTick is a lower NVIC priority than this ISR,
-	// so the tick would be frozen while we wait and the timeout could never expire
-	// (deadlock). Just check for a free mailbox once, non-blocking.
-	if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0U)
-	{
-		// All 3 mailboxes still busy (single-shot normally frees them in ~135 us, so this
-		// should never happen). Abort the stale requests and drop this frame; the next
-		// 20 ms tick sends fresh data.
-		HAL_CAN_AbortTxRequest(&hcan1, CAN_TX_MAILBOX0 | CAN_TX_MAILBOX1 | CAN_TX_MAILBOX2);
-		Dbg_Can_TxDropped++;
-		Can_Error = true;
-		return HAL_TIMEOUT;
-	}
-
-	if (HAL_CAN_AddTxMessage(&hcan1, &txHeader, (uint8_t *)data, mailbox) != HAL_OK)
-	{
-		Can_Error = true;
-		return HAL_ERROR;
-	}
-
-	Dbg_Can_TxRequested++;
-	return HAL_OK;
-}
-
-static void CAN_SendAsbStatusTask(void)
-{
-	canTxStruct_asb.asms_state = ASMS_Out;
-	canTxStruct_asb.tsms_out = TSMS_Out_NOT;
-	canTxStruct_asb.initial_checked = Initial_Checked;
-	//canTxStruct_asb.service_brake_status = Servo_Status;
-	canTxStruct_asb.ebs_status = EBS_Status;
-	canTxStruct_asb.initial_check_step = Initial_Check_Step;
-	//canTxStruct_asb.monitor_tank_pressure = Tank_Pressure_Check;
-	//canTxStruct_asb.monitor_brake_pressure = Brake_Pressure_Check;
-	//canTxStruct_asb.monitor_servo_check = Service_Brake_Check;
-	//canTxStruct_asb.monitor_apu = APU_Communication_Check;
-	//canTxStruct_asb.ebs_tank_pressure = Tank_Pressure * 100;
-
-	can_mcu_asb_pack(txData, &canTxStruct_asb, sizeof(txData));
-	// On a transient bus problem just drop this frame; never hang the node
-	// (a dead node stops participating and floods the bus with error frames).
-	(void)CAN_SendStdMessage(CAN_MCU_ASB_FRAME_ID, CAN_MCU_ASB_LENGTH, txData, &txMailbox);
-}
-
-/*static void CAN_SendAsbDataloggerTask(void)
-{
-	canTxStruct_asb_datalogger.asms_out = ASMS_Out;
-	canTxStruct_asb_datalogger.ebs_pneumatic_pressure = Tank_Pressure;
-	canTxStruct_asb_datalogger.brake_pressure_rear = brake_pressure_rear;
-	canTxStruct_asb_datalogger.brake_pressure_front = brake_pressure_front;
-	canTxStruct_asb_datalogger.eb_sstate_unavailable = (EBS_Status == EBS_Unavailable);
-	canTxStruct_asb_datalogger.eb_sstate_armed = (EBS_Status == EBS_Armed);
-	canTxStruct_asb_datalogger.eb_sstate_activated = (EBS_Status == EBS_Triggered);
-	canTxStruct_asb_datalogger.servicebrakestate_disengaged = (Servo_Status == Servo_Disengaged);
-	canTxStruct_asb_datalogger.servicebrakestate_engaged = (Servo_Status == Servo_Engaged);
-	canTxStruct_asb_datalogger.servicebrakestate_available = (Servo_Status == Servo_Available);
-	canTxStruct_asb_datalogger.watchdog_ok = Watchdog_Check;
-	canTxStruct_asb_datalogger.valve_interlock_ok = (Interlock_Valve1_Check && Interlock_Valve2_Check);
-	canTxStruct_asb_datalogger.servo_interlock_ok = Servo_Interlock_Check;
-	canTxStruct_asb_datalogger.as_state = can_mcu_apu_state_mission.as_state;
-	
-	can_mcu_asb_datalogger_pack(txData, &canTxStruct_asb_datalogger, sizeof(txData));
-	// Drop on transient failure instead of hanging the node (see note above).
-	(void)CAN_SendStdMessage(CAN_MCU_ASB_DATALOGGER_FRAME_ID, CAN_MCU_ASB_DATALOGGER_LENGTH, txData, &txMailbox);
-}*/
 
 /* USER CODE END 0 */
 
@@ -297,7 +117,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
- HAL_Init();
+   HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -323,95 +143,109 @@ int main(void)
   MX_TIM5_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-  Init_All();
-  if(HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, ADC_BUFFER_SIZE) != HAL_OK)
-		Error_Handler();
+  
+  /* Module inits */
+  EBS_Init();
+  ASB_System_Init();
+  Sensors_Init();
+  ServiceBrake_Init();
+  CAN_App_Init();
+  IC_Init();
+  Monitor_Init();
 
+  /* Start peripherals */
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_buffer, ASB_ADC_BUFFER_SIZE);
+  HAL_TIM_Base_Start_IT(&htim2);   /* ADC trigger          */
+  HAL_TIM_Base_Start_IT(&htim4);   /* Monitoring interval   */
+  HAL_TIM_Base_Start_IT(&htim5);   /* CAN ASB TX            */
+  HAL_TIM_Base_Start_IT(&htim6);   /* CAN Pressures TX      */
+  HAL_TIM_Base_Start_IT(&htim7);   /* CAN Datalogger TX     */
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+  HAL_DAC_Start(&hdac, DAC_CHANNEL_1);       /* Service brake DAC */
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-	  // ---- Debug Mode: manual EBS activation override ----
-	if(Selected_Mission() == Autonomous){
-		  switch(can_mcu_apu_state_mission.as_state){
-		  case(AS_Off): 				// AS_OFF = 1 (CAN)
-		  if ((htim3.Instance->CR1 & TIM_CR1_OPM) != 0){ 		 	//If One Pulse Mode is Enabled
-			  HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4); 	//Stop the timer (in case it expired we need to stop and start it again to work properly
-			  htim3.Instance->CR1 &= ~TIM_CR1_OPM; 		// Disable OPM
-			  __HAL_TIM_SET_COUNTER(&htim3, 0);    		//Reset counter to 0 (a bit extra)
-			  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);	//Restart the timer with the correct setup
-		          }
-		  Monitoring = false;
-		  Initial_Checked = false;		//This makes the APU AS_off until Initial Checks are complete
-		  ASRelay_State = 0;			// Open the SDC
-		  HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
-		  Value = 0;
-		  HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
-		  if(ASMS_Out == 1)				//Necessary for the checks
-		  		As_Initial_Check();
-		  break;
+    if (tick_10ms)
+    {
+      tick_10ms = false;
+      Inputs_Sample();
+      if (SYS_GetSelectedMission() == MISSION_AUTONOMOUS)
+      {
+        switch (CAN_GetASState())
+          {
+            case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_OFF_CHOICE:  /* AS_Off */
+            if (IC_GetState() < IC_WAIT_SDC_CLOSE_FIRST_TIME) { SDC_Open(); }
+            // keep SDC open until the initial check reaches the dig-pin-high step
+            IC_Run();
 
 
-		  case(AS_Driving):	 			// AS_Driving = 3 (CAN)
-		  Value = 0;
-		  HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
-		  if(can_mcu_apu_state_mission.as_set_finished == CAN_MCU_APU_STATE_MISSION_AS_SET_FINISHED_SET__FINISHED__TRUE_CHOICE)
-		  {
-			  Valve1_GND = 0;
-			  HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-			  Valve2_GND = 0;
-			  HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port,Valve2_GND_ST_Pin, GPIO_PIN_RESET);
-			  ASRelay_State = 0;		//Open SDC at finished state
-			  HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
+            break;
 
-			  htim3.Instance->CR1 &= ~TIM_CR1_OPM;		//This disables one pulse mode and returns to regular timer functionality watchdog timer
-			  Monitoring = false;
-		  	// APU notifies that its mission has finished and waits for ASB to do the appropriate actions in order for the car to be in actual Finished State
-		  	// For Finished State APU needs: 1)EBS_Ativated, 2)Mission_Finished(Finish line detected + Standstill) after EBS we must open the SDC
-		  	// So if set finished is true i have to engage ebs and the open SDC (AS_relay_Signal = 0)
-		  	// If RES is opened -> Emergency or if EBS_Activated an Mission_Not_Finished -> Emergency
-		  	}
-		  break;
+            case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_READY_CHOICE:  /* AS_Ready */
+            if ( ServiceBrake_State() != SERVICE_BRAKE_PARK) { ServiceBrake_Park(); }
+            // park the service brake so the car cant roll if something goes wrong
+            if (EBS_State() != EBS_ARMED) { SDC_Open(); }
+            // EBS has to be armed at this point, otherwise keep the SDC open
 
 
-		  case(AS_Emergency):	 // AS_Emergency = 5 (CAN)	//We enter emergency if ebs is activated but vehicle is moving or mission is not finished
-		  Monitoring = false;
-		  Valve1_GND = 0;
-		  HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-		  Valve2_GND = 0;
-		  HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port,Valve2_GND_ST_Pin, GPIO_PIN_RESET);
-		  ASRelay_State = 0;	//Open SDC
-		  HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
-		  
-		  }
-	  }
-	  else if(Selected_Mission() == Manual)			//Manual Mission received
-	  {
-		  Initial_Check_Step = 100;
-		  Monitoring = false;
-		  //This ensures watchdog is Normal mode while we are running manual mode
-		  if ((htim3.Instance->CR1 & TIM_CR1_OPM) != 0) 		//If One Pulse Mode is Enabled
-	      {
-			  HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4); 				//Stop the timer (in case it expired we need to stop and start it again to work properly
-			  htim3.Instance->CR1 &= ~TIM_CR1_OPM; 		 			// Disable OPM
-			  __HAL_TIM_SET_COUNTER(&htim3, 0);    					//Reset counter to 0 (a bit extra)
-			  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);				//Restart the timer with the correct setup
-	      }
+            break;
 
-		  if((Manual_Initial_Checked == false) && (ASMS_Out == 0) /*&& (EBS_Status == EBS_Unavailable)*/)	//Ensure that nothing goes wrong until SDC closes//ASB must check that no autonomous brake actuation is possible ASMS = 0 -> Servo Disengaged before closing the SDC (Manual mode)
-			  Manual_Initial_Check();				//We enter this once because of Change in Manual initial checkes change if succesfull
+            case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_DRIVING_CHOICE:  /* AS_Driving */
+            if (ServiceBrake_State() != SERVICE_BRAKE_AVAILABLE) 
+            { 
+              ServiceBrake_Disengage();
+              ServiceBrake_Available();
+            }  // make the service brake available - ready to brake but no pressure yet
+                      
+            /* AS_FINISHED */
+
+            if(CAN_GetASSetFinished() == CAN_MCU_APU_SET_FINISHED_SET_FINISHED_TRUE_CHOICE) 
+            {
+              EBS_Activate();
+              SDC_Open();
+            }   // APU says mission finished -> EBS + SDC open, car stays stopped
+            
+            break;
+
+            case CAN_MCU_DV_SYSTEM_STATUS_AS_STATUS_EMERGENCY_CHOICE:  /* AS_Emergency */
+            EBS_Activate();
+            SDC_Open();
 
 
+            break;
 
-	  }
-		
+            default:
+
+            break;
+          }
+
+          /* continuous monitoring - failed check while armed -> EBS + open SDC */
+          if (!Monitor_Run()) { EBS_Activate(); SDC_Open(); }
+        }
+      else if (SYS_GetSelectedMission() == MISSION_MANUAL)
+      {
+       Manual_Run();
+      }
+
+
+      if(IC_GetState() != IC_STOP_WATCHDOG  && IC_GetState() != IC_WAIT_SDC_OPEN_SECOND_TIME ) { WDG_Reset(); }
+
+    }
+
+    if (tick_20ms)  { tick_20ms  = false; CAN_SendAsbStatus(); }
+
+    if (tick_50ms)  { tick_50ms  = false; CAN_SendHydraulicPressures(); CAN_SendTankPressures(); }
+
+    if (tick_100ms) { tick_100ms = false; CAN_SendDatalogger(); }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+  
+}
   /* USER CODE END 3 */
 }
 
@@ -435,8 +269,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;	// 8 MHz crystal -> accurate clock for 1 Mbit/s CAN
-  RCC_OscInitStruct.PLL.PLLM = 4;						// HSE 8 MHz / 4 = 2 MHz VCO in (same as before) -> 160 MHz SYSCLK
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;  /* 8 MHz crystal -> accurate clock for 1 Mbit/s CAN (HSI ~1% drift causes error frames) */
+  RCC_OscInitStruct.PLL.PLLM = 4;                       /* HSE 8 MHz / 4 = 2 MHz VCO in -> x160 /2 = 160 MHz SYSCLK */
   RCC_OscInitStruct.PLL.PLLN = 160;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
@@ -485,12 +319,15 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ENABLE;
+  /* Scan triggered by TIM2 TRGO every 10ms - continuous/software-start mode
+     free-runs and floods the CPU with DMA interrupts (~1.5us period),
+     starving the main loop completely */
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
   hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T2_TRGO;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 4;
+  hadc1.Init.NbrOfConversion = 2;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -498,34 +335,17 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
 
-  /** Rank 1: TankPressure1 (PA7 / ADC1_IN7) */
-  sConfig.Channel = ADC_CHANNEL_7;
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_15;   /* PC5 = TankPressure1 -> adc_buffer[0] */
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
-
-  /** Rank 2: TankPressure2 (PC4 / ADC1_IN14) */
-  sConfig.Channel = ADC_CHANNEL_14;
+  sConfig.Channel = ADC_CHANNEL_8;    /* PB0 = TankPressure2 -> adc_buffer[1] */
   sConfig.Rank = 2;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Rank 3: PressureActuator1 (PC5 / ADC1_IN15) */
-  sConfig.Channel = ADC_CHANNEL_15;
-  sConfig.Rank = 3;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Rank 4: PressureActuator2 (PB0 / ADC1_IN8) */
-  sConfig.Channel = ADC_CHANNEL_8;
-  sConfig.Rank = 4;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -551,18 +371,14 @@ static void MX_CAN1_Init(void)
   /* USER CODE BEGIN CAN1_Init 1 */
 
   /* USER CODE END CAN1_Init 1 */
-  // Identical CAN init to the ANALOG_UNIVERSAL node (proven working on the car):
-  // APB1 40 MHz / presc 2 = 20 MHz tq, (1 + 15 + 4) = 20 tq -> 1 Mbit/s, sample point 80%
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 2;
+  hcan1.Init.Prescaler = 4;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
-  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_15TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_4TQ;
+  hcan1.Init.SyncJumpWidth = CAN_SJW_2TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_7TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_2TQ;
   hcan1.Init.TimeTriggeredMode = DISABLE;
-  hcan1.Init.AutoBusOff = ENABLE;	// Auto-recover from bus-off: without this the node TX dies ~0.6 s
-									// after boot (32 failed frames) and stays dead until power cycle.
-									// With it, TX resumes by itself the moment the bus path is fixed.
+  hcan1.Init.AutoBusOff = ENABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
@@ -650,7 +466,7 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;	// TIM2 update -> TRGO triggers ADC sequence
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;  /* TIM2 update -> TRGO triggers the ADC scan */
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
@@ -700,7 +516,11 @@ static void MX_TIM3_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  if (HAL_TIM_OnePulse_Init(&htim3, TIM_OPMODE_SINGLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
   {
@@ -829,9 +649,9 @@ static void MX_TIM6_Init(void)
 
   /* USER CODE END TIM6_Init 1 */
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 64934;
+  htim6.Init.Prescaler = 39999;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 6159;
+  htim6.Init.Period = 99;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -922,13 +742,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, EBS_Activate1_Pin|EBS_Activate2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, EBS_Valve1_GND_Pin|EBS_Valve2_GND_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, UserLed_Pin|AS_Relay_Signal_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : ASMS_Pin AS_Relay_OUT_Pin AS_Relay_IN_Pin Interlock_Steering_Pin */
-  GPIO_InitStruct.Pin = ASMS_Pin|AS_Relay_OUT_Pin|AS_Relay_IN_Pin|Interlock_Steering_Pin;
+  /*Configure GPIO pins : ASMS_Pin AS_Relay_Out_Pin AS_Relay_In_Pin Interlock_Steering_Pin */
+  GPIO_InitStruct.Pin = ASMS_Pin|AS_Relay_Out_Pin|AS_Relay_In_Pin|Interlock_Steering_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -939,19 +759,26 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : EBS_Activate1_Pin EBS_Activate2_Pin */
-  GPIO_InitStruct.Pin = EBS_Activate1_Pin|EBS_Activate2_Pin;
+  /*Configure GPIO pins : EBS_Valve1_GND_Pin EBS_Valve2_GND_Pin */
+  GPIO_InitStruct.Pin = EBS_Valve1_GND_Pin|EBS_Valve2_GND_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : UserLed_Pin AS_Relay_Signal_Pin */
-  GPIO_InitStruct.Pin = UserLed_Pin|AS_Relay_Signal_Pin;
+  /*Configure GPIO pin : UserLed_Pin */
+  GPIO_InitStruct.Pin = UserLed_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : AS_Relay_Signal_Pin (open drain - external pull-up on board) */
+  GPIO_InitStruct.Pin = AS_Relay_Signal_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(AS_Relay_Signal_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : TSMS_Pin */
   GPIO_InitStruct.Pin = TSMS_Pin;
@@ -966,687 +793,27 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-int Selected_Mission(){
-	//Scenario where AS_Mission == 0 -> AS_Mission == No_Mission we should not enter autonomous nor manual mode so it is left out (return 0)
-	// 1 is Autonomous || 2 is Manual || 0 is No Mission
-	if ((can_mcu_vcu_bools.mode == 0) && (can_mcu_apu_state_mission.as_mission >= 1) && (can_mcu_apu_state_mission.as_mission <= 6))	//AS_mode == driverless, as_mission == 1 ==  Aceleration, as_mission == 6 == Inspection
-		return 1;
-	else if ((can_mcu_vcu_bools.mode == 1) || (can_mcu_apu_state_mission.as_mission == 7)) // as_mode == 1 == manual, as_mission == 7 == Manual driving
-		return 2;
-	else
-		return 0;
-}
-
-void As_Initial_Check(){
-
-	// activate EBS to ensure brakes engaged
-	Valve1_GND = 0;
-	HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-	Valve2_GND = 0;
-	HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port,Valve2_GND_ST_Pin, GPIO_PIN_RESET);
-	Value = 0;
-	HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
-	HAL_Delay(700);
-
-
-	//	WAIT FOR RES TO CLOSE	//
-
-	Initial_Check_Step = 1;
-
-	do{
-		if(ASMS_Out != 1	||	Selected_Mission() != Autonomous)		//While we wait for the SDC before ASB to close if something changes like ASMS is turned off we break from the initial check procedure
-			return;
-	}while(ASRelay_In == 0);											//AS_relay_in is RES1_Out so if this is low check RES button it is probably pressed
-
-	//	EBS ENGAGED FUNCTIONALITY	//
-
-	Initial_Check_Step = 2;
-
-	do{
-		if(ASMS_Out != 1	||	Selected_Mission() != Autonomous || ASRelay_In != 1)
-			return;
-	}while(Tank_Pressure < Tank_Pressure_min || Brake_Pressure < 5   );	//Check that we have enough pneumatic pressure to activate ebs and that brakes are engaged
-
-	//	CLOSE AS_RELAY	// (SDC CLOSE)
-
-	Initial_Check_Step = 3;
-	ASRelay_State = 1;
-	HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_SET);
-
-	do{
-		if(ASMS_Out != 1	||	Selected_Mission() != Autonomous || ASRelay_In != 1)
-		return;
-	}while(ASRelay_Out != 1);					//Wait for AS Relay to close so AS_Relay out is high
-
-	//	DISABLE WATCHDOG	//
-
-	Initial_Check_Step = 4;
-	HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_4);	//Stop the timer that produces Watchdog PWM -> SDC opens
-
-	do{
-		if(ASMS_Out != 1	||	Selected_Mission() != Autonomous || ASRelay_In != 1){
-			HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);	//Restart it so as relay is able to close on command if we re-enter the initial checks
-			return;
-		}
-	}while(ASRelay_Out != 0);					//Wait for AS RELAY to open
-
-	//	ENABLE WATCHDOG	//
-
-	Initial_Check_Step = 5;
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);	// Start the timer that produces Watchdog PWM
-
-	do{
-		if(ASMS_Out != 1	||	Selected_Mission() != Autonomous || ASRelay_In != 1)
-			return;
-	}while(ASRelay_Out != 1);					//Wait for AS RELAY to close
-
-	//	WAIT FOR CLOSED SDC	//
-
-	Initial_Check_Step = 6;
-
-	do{
-		if(ASMS_Out != 1	||	Selected_Mission() != Autonomous || 	ASRelay_Out != 1)	//From now on we check AS_Relay_Out only inste of IN=0 -> OUT=0 as well so it is included
-			return;
-	}while(TSMS_Out_NOT == 0);					//TSMS is the last part of the SDC so TSMS high means we have closed SDC
-
-	//	DE-ACTIVATE EBS	//
-
-		Initial_Check_Step = 7;
-
-		Valve1_GND = 1;
-		HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_SET);
-		Valve2_GND = 1;
-		HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port,Valve2_GND_ST_Pin, GPIO_PIN_SET);
-
-
-
-		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT == 0)	//TSMS_Out_NOT is after AS_Relay_Out on our vehicle SDC so checking that includes AS_Relay_Out and therefore in as well
-				return;
-		}while(Brake_Pressure > 3);
-
-	//	ACTIVATE EBS RIGHT	//
-
-		Initial_Check_Step = 8;
-
-		Valve1_GND = 0;
-		HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-		HAL_Delay(700);
-
-		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT == 0)
-				return;
-		}while(Brake_Pressure < 1);			// IT DEEDS SETTING
-
-	//	DE-ACTIVATE EBS	//
-
-		Initial_Check_Step = 9;
-
-		Valve1_GND = 1;
-		HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port, Valve1_GND_ST_Pin, GPIO_PIN_SET);
-		HAL_Delay(700);
-
-		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT == 0)
-				return;
-		}while(Brake_Pressure > 3);
-
-	//	ACTIVATE EBS LEFT	//
-
-		Initial_Check_Step = 10;
-
-		/*Valve2_GND = 0;
-		HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_RESET);
-		HAL_Delay(700);
-
-		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT == 0)
-				return;
-		}while(Brake_Pressure < 1);		// IT DEEDS SETTING
-
-		// DE-ACTIVATE EBS //
-
-		Initial_Check_Step = 11;
-
-		Valve2_GND = 1;
-		HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port, Valve2_GND_ST_Pin, GPIO_PIN_SET);
-		HAL_Delay(700);
-
-		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != Autonomous ||	TSMS_Out_NOT == 0)
-				return;
-		}while(Brake_Pressure > 3);*/
-
-		// ACTIVATE SERVICE BRAKE //
-		
-		Initial_Check_Step = 12;
-
-		Service_Brake = true;	//Service brake is activated by setting this variable to 1 and it is deactivated by setting it to 0, this is used in the monitor all function to activate the service brake if something goes wrong in the checks and it is also used in the initial checks to activate the service brake at the end of the initial checks and then deactivate it after we receive AS_Ready as a final confirmation that everything is working fine and we can start the mission
-		Value = 4095;
-		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
-		HAL_Delay(700);
-
-		do{
-		if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT == 0)
-			return;
-		}while(Brake_Pressure < 1);
-
-		// De-ACTIVATE SERVICE BRAKE //
-
-		Initial_Check_Step = 13;
-
-		Service_Brake = false;
-		Value = 0;
-		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
-		HAL_Delay(700);
-
-		do{
-			if(ASMS_Out != 1	||	Selected_Mission() != 1 ||	TSMS_Out_NOT == 0)
-				return;
-		}while(Brake_Pressure > 3);
-
-		//SET SERVICE BRAKE AVAILABLE //
-
-		Initial_Check_Step = 14;
-
-		Value = 4095;
-		HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, Value);
-		HAL_Delay(700);
-
-		Initial_Checked = true; 			//Initial Check has been completed (almost) notify APU and wait for AS_Ready transition
-
-
-	//	WAIT FOR APU AS READY	//	(5 seconds Max time)
-
-		Initial_Check_Step = 15;
-
-		//HAL_TIM_Base_Start_IT(&htim6);		//interrupt for 5 seconds
-		do{
-			if(APU_Transition == false){
-				Initial_Checked = false;
-				return;
-			}
-		}while(can_mcu_apu_state_mission.as_state != AS_Ready);
-
-	//	AS READY RECEIVED	//
-
-		Initial_Check_Step = 16;
-		Monitoring = true;
-
-	//	WATCHDOG OPM
-
-		__HAL_TIM_SET_COUNTER(&htim3, 0);	//This ensures that the timer is at 0ms of period because if it was close to the end of its cycle it might end before we reset it via the monitoring function and it would be off
-		htim3.Instance->CR1 |= TIM_CR1_OPM;	//Enables the One Pulse Mode bit on the watchdog PWM timer
-		Initial_Check_Step = 17;			//AS_Initial_Check is completed succesfully if Initial_Check_Step = 15
-	}
-
-
-bool Continuous_Monitoring()	// runs every 10 ms
-{
-
-	__HAL_TIM_SET_COUNTER(&htim3, 0);	//This resets the timer to 0 ensuring that PWM generation is continued
-
-	//	WATCHDOG CHECK	//
-
-	if(ASRelay_State == 1 && ASRelay_In == 1 && ASRelay_Out == 0)	//If SDC reaches AS relay, and AS_Relay_Signal==1 but as relay is opened only watchdog	(or hardware malfunction) are the possible causes
-	{
-		Watchdog_Check_error++;
-		if(Watchdog_Check_error > 50)
-			Watchdog_Check = false;	//This is used in Datalogger can there is no point entering this in the monitor_all because if this fails sdc is opened already and ebs is triggered so we should go in emergency and there monitoring should go off so this no longer repeats
-	}
-	else
-	{
-		Watchdog_Check_error = 0;
-		Watchdog_Check = true;	//Consider removing this (mistake in asf) it is extra, no need to watchdog check
-	}
-	//	BRAKE PRESSURE CHECKS	//
-
-	if(Brake_Pressure < 150 && Brake_Pressure >= 0)	//Brake_Pressure at normal value range
-	{
-		Brake_Pressure_Check_ms += 10;				//Increases the time from last message (this goes to 0 when can message is received see the HAL_CAN_RxFifo0MsgPendingCallback()
-		Brake_Pressure_Check_errors = 0;			//Makes the consecutive errors to 0
-		Brake_Pressure_Check = true;					//Succesfull Brake Pressure Check
-	}
-	else
-	{
-		Brake_Pressure_Check_ms += 10;
-		Brake_Pressure_Check_errors++;				//error counter + 1
-	}
-
-	if(Brake_Pressure_Check_errors >= 10 || Brake_Pressure_Check_ms > 400)	//10 consecutive errors needed in order to fail the check
-			Brake_Pressure_Check = false;				//Failed Brake Pressure Check
-	//	TANK PRESSURE CHECKS	//
-
-	if(Tank_Pressure > Tank_Pressure_min && Tank_Pressure < Tank_Pressure_max)	//Tank_Pressure in acceptable limits
-	{
-		Tank_Pressure_Check_ms += 10;					//Increases time from last Value received, this becomes 0 when a new value is received look HAL_ADC_ConvCpltCallback
-		Tank_Pressure_Check_errors = 0;				//Makes the consecutive errors to 0
-		Tank_Pressure_Check = true;						//Succesfull Tank Pressure Check
-	}
-	else
-	{
-		Tank_Pressure_Check_ms += 10;
-		Tank_Pressure_Check_errors++;					//error counter + 1
-	}
-
-	if(Tank_Pressure_Check_errors >= 10 || Tank_Pressure_Check_ms > 1000)	//10 consecutive errors needed in order to fail the check
-			Tank_Pressure_Check = false;				//Failed Tank Pressure Check
-
-	//	VALVE INTERLOCK 1 CHECK	//
-
-	if(Interlock_Valve1 == 1)	//Valve_Interlock == 1 -> Valve connector connected
-	{
-		Interlock_Valve1_Check_errors = 0;				//Set consecutive errors to 0
-		Interlock_Valve1_Check = true;						//Succesfull Valve Interlock Check
-	}
-	else
-	{
-		Interlock_Valve1_Check_errors++;					//error counter + 1
-		if(Interlock_Valve1_Check_errors >= 10)	//10 consecutive errors needed in order to fail the check
-			Interlock_Valve1_Check = false;				//Failed Valve Interlock Check
-	}
-
-	//	VALVE INTERLOCK 2 CHECK	//
-
-	if(Interlock_Valve2 == 1)	//Servo connector is connected
-	{
-		Interlock_Valve2_Check_errors = 0;				//Set consecutive errors to 0
-		Interlock_Valve2_Check = true;						//Succesfull Valve Interlock Check
-	}
-	else
-	{
-		Interlock_Valve2_Check_errors++;					//error counter + 1
-			if(Interlock_Valve2_Check_errors >= 10)	//10 consecutive errors needed in order to fail the check
-				Interlock_Valve2_Check = false;				//Failed Valve Interlock Check
-	}
-			//	APU COMMUNICATION CHECK	//
-
-	if(APU_Communication_Check_ms <= 500)	//Time since last APU message <500ms ago
-	{																			//This timer goes to 0 when a new message arrives
-		APU_Communication_Check_ms += 10;		//Add  4321543gd`	10ms to time since last message
-		APU_Communication_Check = true;
-	}
-	else
-		APU_Communication_Check = false;//Time > 500ms -> Fail
-
-	//Monitor_All = Brake_Pressure_Check && Tank_Pressure_Check && Interlock_Valve1_Check && Interlock_Valve2_Check && APU_Communication_Check;
-
-	return (1);
-}
-
-
-void Manual_Initial_Check()
-{
-	Initial_Check_Step = 100;
-	ASRelay_State = 1;						//Close AS_Relay
-	HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_SET);
-
-	if((ASMS_Out == 1) || (Selected_Mission() != Manual) ||	(EBS_Status != EBS_Unavailable))//Ensure that nothing goes wrong until SDC closes
-	{
-		ASRelay_State = 0;				//If an error case appeears open the SDC
-		HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
-		return;
-	}
-
-	Initial_Check_Step = 101;
-	Manual_Initial_Checked = true; 			//This ensures that this function is entered only once
-	Initial_Checked = true;
-}
-
-void Manual_Monitoring()
-{
-	if(Manual_Initial_Checked == true)
-	{
-		if(ASMS_Out == 0 && EBS_Status == EBS_Unavailable)
-		{
-			Manual_monitor_check = true;
-			Manual_monitor_counter = 0;
-				}
-		else
-		{
-			Manual_monitor_counter++;
-			if(Manual_monitor_counter > 20) //2 seconds of persisting continuous error
-			{
-				Manual_monitor_check = false;
-				ASRelay_State = 0;
-				HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
-				Initial_Checked = false;
-				Manual_Initial_Checked = false;
-					}
-				}
-			}
-}
-
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    if (hadc->Instance == ADC1)
-    {
-		Tank_Pressure_Check_ms = 0;	//Monitoring functiion, each time a new value is received make it 0
-
-		// Rank 1 - PA7 / IN7 - TankPressure1
-		ADC_Value = adc_buffer[0];
-		ADC_Voltage_Value = ((float)ADC_Value / 4095.0f) * 3.3f;
-		Voltage_Change = ADC_Voltage_Value * 1.5f;	//0-3.3V -> 0-5V (hardware divider)
-		Tank_Pressure = (2.5f * Voltage_Change) - 2.5f;
-
-		// Rank 2 - PC4 / IN14 - TankPressure2
-		ADC_Value_2 = adc_buffer[1];
-		ADC_Voltage_Value_2 = ((float)ADC_Value_2 / 4095.0f) * 3.3f;
-		Voltage_Change_2 = ADC_Voltage_Value_2 * 1.5f;
-		Tank_Pressure_2 = (2.5f * Voltage_Change_2) - 2.5f;
-
-		// Rank 3 - PC5 / IN15 - PressureActuator1  (M3041 500PG, 0.5-4.5V -> 0-34.4738 bar)
-		ADC_Pressure_Actuator_1_Raw = adc_buffer[2];
-		{
-			float v_sensor = ((float)ADC_Pressure_Actuator_1_Raw / 4095.0f) * 3.3f * 1.5f;
-			Pressure_Actuator_1 = (v_sensor - 0.5f) * 8.6184f;
-		}
-
-		// Rank 4 - PB0 / IN8 - PressureActuator2
-		ADC_Pressure_Actuator_2_Raw = adc_buffer[3];
-		{
-			float v_sensor = ((float)ADC_Pressure_Actuator_2_Raw / 4095.0f) * 3.3f * 1.5f;
-			Pressure_Actuator_2 = (v_sensor - 0.5f) * 8.6184f;
-		}
-    }
-}
+/*ISRs for timer callbacks*/
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	if(htim->Instance == TIM2)
-	{
-		HAL_GPIO_TogglePin(UserLed_GPIO_Port, UserLed_Pin);
-	}
-
-	if(htim->Instance == TIM4) //10ms
-	{
-		//	CAN BUS HEALTH SNAPSHOT	// (read the raw HW error counters for Live Expressions)
-		{
-			uint32_t esr = hcan1.Instance->ESR;
-			Dbg_Can_Tec = (esr >> 16) & 0xFFU;					// CAN_ESR_TEC
-			Dbg_Can_Rec = (esr >> 24) & 0xFFU;					// CAN_ESR_REC
-			Dbg_Can_Lec = (esr >> 4) & 0x7U;					// CAN_ESR_LEC
-			Dbg_Can_BusOff = ((esr & CAN_ESR_BOFF) != 0U);
-			Dbg_Can_ErrorPassive = ((esr & CAN_ESR_EPVF) != 0U);
-		}
-
-		//	DIGITAL INPUTS	//
-		ASMS_Out = HAL_GPIO_ReadPin(ASMS_Out_GPIO_Port, ASMS_Out_Pin);
-		TSMS_Out_NOT = HAL_GPIO_ReadPin(TSMS_Out_NOT_GPIO_Port, TSMS_Out_NOT_Pin);
-		ASRelay_In = HAL_GPIO_ReadPin(ASRelay_In_GPIO_Port,ASRelay_In_Pin);
-		ASRelay_Out = HAL_GPIO_ReadPin(ASRelay_Out_GPIO_Port, ASRelay_Out_Pin);
-		Interlock_PV = HAL_GPIO_ReadPin(Interlock_PV_GPIO_Port, Interlock_PV_Pin);
-		Interlock_Steering = HAL_GPIO_ReadPin(Interlock_Steering_GPIO_Port, Interlock_Steering_Pin);
-		Interlock_Valve1 = HAL_GPIO_ReadPin(Interlock_Valve1_GPIO_Port, Interlock_Valve1_Pin);
-		Interlock_Valve2 = HAL_GPIO_ReadPin(Interlock_valve2_GPIO_Port, Interlock_valve2_Pin);
-
-		//	EBS STATE	//
-		if(Tank_Pressure < Tank_Pressure_min)
-			EBS_Status = EBS_Unavailable;			//We do not have the sufficient tank pressure to consider ebs triggered when activated (it may be activated but brake pressure will me minimal)
-		else if(TSMS_Out_NOT == 0 || Valve1_GND == 0 || Valve2_GND == 0)	//No SDC or EBS Activated -> EBS Activated + Enough Tank Presure -> EBS Triggered (What about mechanical Valve)
-			EBS_Status = EBS_Triggered;
-		else
-			EBS_Status = EBS_Armed;								//Tank Pressure sufficient + SDC + EBS Not Activated -> Armed = Ready to be commanded and functional
-
-		//	MONITORING	//
-		if(Monitoring == true)
-		{
-			if(Selected_Mission() == Autonomous)
-			{
-				if(Continuous_Monitoring() == false || ASMS_Out == 0)
-				{
-					Monitoring = false; 			//This ensures monitoring function wont run again after failing
-					Valve1_GND = 0;					//If an error occurs open SDC -> EBS Activated -> AS_Emergency
-					HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-					Valve2_GND = 0;
-					HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port,Valve2_GND_ST_Pin, GPIO_PIN_RESET);
-					ASRelay_State = 0;				//SDC is open so EBS is triggered on matter what, so we match the physical state with the software side
-					HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
-				}
-			}
-		}
-	}
-
-	if(htim->Instance == TIM5)	//20 ms period
-	{
-		CAN_SendAsbStatusTask();
-	}
-
-	//	APU TRANSITION	//
-
-	if (htim->Instance == TIM6)	//(5 sec) passed until Initial_Checked == true has been sent to can
-	{
-		if(can_mcu_apu_state_mission.as_state != AS_Ready)
-			APU_Transition = false; //this means that 5 seconds passed and as did not transition to as ready
-	}
-
-	if(htim->Instance == TIM7)	//100ms
-	{
-		//CAN_SendAsbDataloggerTask();
-
-		if(Manual_Initial_Checked == true)
-			Manual_Monitoring();
-	}
+    if      (htim->Instance == TIM4) { tick_10ms  = true; }   /* 10 ms  */
+    else if (htim->Instance == TIM5) { tick_20ms  = true; }   /* 20 ms  */
+    else if (htim->Instance == TIM6) { tick_50ms  = true; }   /* 50 ms  */
+    else if (htim->Instance == TIM7) { tick_100ms = true; }   /* 100 ms */
 }
 
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)	//runs automaticly each time a can message is received
+/* CAN RX */
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-	if(hcan->Instance == CAN1)  	// CAN1 Interrupt
-	{
-		if(HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &msgHeaderRx, rxData) != HAL_OK)
-		{
-			Can_Error = true;
-			Error_Handler();
-		}
-		Dbg_Can_RxCount++;
-		// Read received message
-
-			if (msgHeaderRx.StdId == CAN_MCU_DASH_BRAKE_FRAME_ID ){
-				Brake_Pressure_Check_ms = 0;
-				can_mcu_dash_brake_unpack(&can_mcu_dash_brake, rxData, msgHeaderRx.DLC);
-
-				brake_pressure_front = can_mcu_dash_brake_brake_pressure_front_decode(can_mcu_dash_brake.brake_pressure_front);
-				brake_pressure_rear = can_mcu_dash_brake_brake_pressure_rear_decode(can_mcu_dash_brake.brake_pressure_rear);
-				Brake_Pressure = brake_pressure_front;
-			}
-			else if (msgHeaderRx.StdId == CAN_MCU_APU_STATE_MISSION_FRAME_ID){
-				APU_Communication_Check_ms = 0;
-				can_mcu_apu_state_mission_unpack(&can_mcu_apu_state_mission, rxData, msgHeaderRx.DLC);
-			}
-			else if (msgHeaderRx.StdId == CAN_MCU_VCU_SERVO_CONTROL_FRAME_ID) {
-				can_mcu_vcu_servo_control_unpack(&can_mcu_vcu_servo_control, rxData, msgHeaderRx.DLC);
-				Servo_Command = can_mcu_vcu_servo_control.servo_control;
-			}
-			else if (msgHeaderRx.StdId == CAN_MCU_VCU_BOOLS_FRAME_ID)
-				can_mcu_vcu_bools_unpack(&can_mcu_vcu_bools, rxData, msgHeaderRx.DLC);	//We read AS vcu_bools.mode 0 => DV, 1=> Manual
-	}
+    if (hcan->Instance == CAN1)
+        CAN_ProcessRxMessage();
 }
 
-void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
+/* ADC DMA complete - update tank pressure readings */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-	if (hcan->Instance == CAN1)
-	{
-		Can_Error = true;
-		Dbg_Can_LastHalError = hcan->ErrorCode;
-		// Grab ESR at the exact instant of the failure. Successfully received frames
-		// clear ESR.LEC again within microseconds on a busy bus, so the periodic 10 ms
-		// snapshot reads LEC=0 even while every single TX is failing - only a capture
-		// taken inside this interrupt can still see the real error code.
-		{
-			uint32_t esr = hcan->Instance->ESR;
-			Dbg_Can_EsrAtFail = esr;
-			Dbg_Can_LecAtFail = (esr >> 4) & 0x7U;
-		}
-		// A transmission finished without success (no ACK, bit error or lost arbitration)
-		if ((hcan->ErrorCode & (HAL_CAN_ERROR_TX_TERR0 | HAL_CAN_ERROR_TX_TERR1 | HAL_CAN_ERROR_TX_TERR2 |
-		                        HAL_CAN_ERROR_TX_ALST0 | HAL_CAN_ERROR_TX_ALST1 | HAL_CAN_ERROR_TX_ALST2)) != 0U)
-			Dbg_Can_TxFail++;
-		// Clear the sticky HAL error bits so the next event reports its own fresh cause
-		HAL_CAN_ResetError(hcan);
-	}
-}
-
-// A frame was actually acknowledged on the bus -> TX is healthy right now.
-// Clearing here keeps Can_Error as a live status flag instead of a boot-time latch
-// (the first frames sent before the other nodes are up fail and set it).
-void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)
-{
-	if (hcan->Instance == CAN1)
-	{
-		Can_Error = false;
-		Dbg_Can_TxOk++;
-	}
-}
-
-void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan)
-{
-	if (hcan->Instance == CAN1)
-	{
-		Can_Error = false;
-		Dbg_Can_TxOk++;
-	}
-}
-
-void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan)
-{
-	if (hcan->Instance == CAN1)
-	{
-		Can_Error = false;
-		Dbg_Can_TxOk++;
-	}
-}
-
-void Init_All(){
-
-	//	VARIABLES	//
-
-	Initial_Checked = false;
-	ASMS_Out = 0;
-	TSMS_Out_NOT = 1;
-	ASRelay_In = 0;
-	ASRelay_Out = 0;
-	Interlock_Valve1 = 0;
-	Interlock_Valve2 = 0;
-	Tank_Pressure = 0;
-	Brake_Pressure = 0;
-	Manual_Initial_Checked = false;
-	Manual_monitor_check = true;
-	Manual_monitor_counter = 0;
-	Watchdog_Check_error = 0;
-	ADC_Voltage_Value = 0;
-	ADC_Value = 0;
-	brake_pressure_front = 0;
-	brake_pressure_rear = 0;
-	Initial_Check_Step = 0;
-	Servo_Status = Servo_Disengaged;
-	Servo_Command = 1;
-	Can_Error = false;
-	Brake_Pressure = 0;
-	APU_Transition = true;
-
-	HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
-	Valve1_GND=0;
-	HAL_GPIO_WritePin(Valve1_GND_ST_GPIO_Port,Valve1_GND_ST_Pin, GPIO_PIN_RESET);
-	Valve2_GND = 0;
-	HAL_GPIO_WritePin(Valve2_GND_ST_GPIO_Port,Valve2_GND_ST_Pin, GPIO_PIN_RESET);
-	ASRelay_State = 0;
-	HAL_GPIO_WritePin(ASRelay_State_GPIO_Port, ASRelay_State_Pin, GPIO_PIN_RESET);
-
-	//	MONITORING	//
-
-	Debug_Mode = false;
-	Debug_EBS_Active = false;
-	Monitor_All = true;					//Initialize all checks to true (less fail points)
-	Monitoring = false;					//Start without monitoring
-	Watchdog_Check = true;
-	Brake_Pressure_Check_ms = 0;
-	Brake_Pressure_Check = true;
-	Brake_Pressure_Check_errors = 0;
-	Tank_Pressure_Check_errors = 0;
-	Tank_Pressure_Check_ms = 0;
-	Tank_Pressure_Check = true;
-	Interlock_Valve1_Check = true;
-	Interlock_Valve1_Check_errors = 0;
-	Interlock_Valve2_Check = true;
-	Interlock_Valve2_Check_errors = 0;
-	Service_Brake_Check = true;
-	Servo_Interlock_Check = true;
-
-	// ----------- INIT CAN PERIPHERAL --------------- //
-		// CAN filter settings
-		CAN_FilterTypeDef filterConfig;
-
-		// Common filter configuration
-		filterConfig.FilterMode = CAN_FILTERMODE_IDLIST; // List mode
-		filterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-		filterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
-		filterConfig.FilterActivation = ENABLE;
-		filterConfig.SlaveStartFilterBank = 0;  // CAN1 uses 0�26, CAN2 starts at 27
-
-		// List of allowed standard IDs
-		uint16_t acceptedIDs[] = {
-				0x00A,  // APU_STATE_MISSION
-				0x065,  // DASH_BRAKE
-				0x320,  // VCU_BOOLS
-				0x324,  // VCU_SERVO_CONTROL
-				//0x2ff,
-		};
-
-		int idCount = sizeof(acceptedIDs) / sizeof(acceptedIDs[0]);
-		int bankIndex = 0;
-
-		// Load 2 IDs per filter bank
-		for (int i = 0; i < idCount; i += 2)
-		{
-				filterConfig.FilterBank = bankIndex++;
-
-				// First ID (Standard ID -> shift left 5)
-				filterConfig.FilterIdHigh     = acceptedIDs[i] << 5;
-				filterConfig.FilterIdLow      = 0;
-
-				// Second ID
-				if (i + 1 < idCount) {
-						filterConfig.FilterMaskIdHigh = acceptedIDs[i + 1] << 5;
-						filterConfig.FilterMaskIdLow  = 0;
-				} else {
-						filterConfig.FilterMaskIdHigh = 0;
-						filterConfig.FilterMaskIdLow  = 0;
-				}
-
-				if (HAL_CAN_ConfigFilter(&hcan1, &filterConfig) != HAL_OK)
-				{
-					Can_Error = true;
-					Error_Handler();
-				}
-		}
-
-		if (HAL_CAN_Start(&hcan1) != HAL_OK)
-		{
-			Can_Error = true;
-			Error_Handler();
-		}
-		if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING | CAN_IT_TX_MAILBOX_EMPTY) != HAL_OK)
-		{
-			Can_Error = true;
-			Error_Handler();
-		}
-
-		can_mcu_apu_state_mission.as_mission = No_Mission;
-		can_mcu_apu_state_mission.as_state = AS_Off;
-		// Clear buffers to avoid leftover values affecting CAN messages
-		for(int i=0; i<8; i++)
-			txData[i] = 0;
-		for(int i=0; i<8; i++)
-			rxData[i] = 0;
-
-	//	TIMERS	//
-
-	HAL_TIM_Base_Start_IT(&htim2);	//ADC trigger / debug heartbeat
-	HAL_TIM_Base_Start_IT(&htim4);	//Monitor exct		(10ms) pr=49999 c=15
-	HAL_TIM_Base_Start_IT(&htim5);	//CAN	ASB			(20ms) pr=39999 c=30
-	HAL_TIM_Base_Start_IT(&htim7);	//CAN	ASB Datalogger	(100ms)
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
-	HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
-
+    if (hadc->Instance == ADC1)
+        Sensors_Update(adc_buffer);
 }
 
 /* USER CODE END 4 */
